@@ -14,19 +14,19 @@ flowchart TB
     end
 
     subgraph OCP["Red Hat OpenShift"]
-        subgraph MCP["MCP Server Hub (namespace: mcp-servers)"]
+        subgraph MaaS["MaaS Unified Gateway"]
+            Gateway[MaaS Gateway]
+            Auth[Authorino - Auth & API Keys]
+            RateLimit[Limitador - Rate Limiting]
+            MaaSAPI[MaaS API]
+        end
+
+        subgraph MCP["MCP Servers (namespace: mcp-servers)"]
             Context7[Context7 - Library Docs]
             GitHub[GitHub MCP - Repo Ops]
             GHGrep[gh-grep - Code Search]
             SeqThink[Sequential Thinking]
             Chrome[Chrome DevTools]
-        end
-
-        subgraph MaaS["Models as a Service (MaaS)"]
-            Gateway[MaaS Gateway]
-            Auth[Authorino - Auth & API Keys]
-            RateLimit[Limitador - Rate Limiting]
-            MaaSAPI[MaaS API]
         end
 
         subgraph RHOAI["OpenShift AI Model Serving"]
@@ -36,19 +36,19 @@ flowchart TB
         end
     end
 
-    IDE -->|MCP Protocol / HTTPS| MCP
-    IDE -->|OpenAI-compatible API| Gateway
+    IDE -->|Single API Key / HTTPS| Gateway
     Gateway --> Auth
     Auth --> RateLimit
-    RateLimit --> vLLM1
+    RateLimit -->|Model Inference| vLLM1
     RateLimit --> vLLM2
     RateLimit --> vLLM3
+    Gateway -->|MCP Proxy| MCP
 ```
 
 ## How It Works
 
-* **Phase 1 (MCP Servers):** Deploy MCP servers as OpenShift Services with Routes. IDEs connect via HTTPS to shared tool servers — enabling team-wide access to GitHub operations, documentation lookup, browser automation, and more.
-* **Phase 2 (MaaS):** Enable Models as a Service on RHOAI to provide a managed AI gateway with built-in API key authentication, subscription-based rate limiting, and model discovery — all operator-managed with zero manual proxy deployment.
+* **Phase 1 (MCP Servers):** Deploy MCP servers as OpenShift Services with Routes. Servers are containerized and accessible within the cluster.
+* **Phase 2 (MaaS — Unified Gateway):** Enable Models as a Service on RHOAI as a **unified gateway** for both model inference and MCP tool access. MaaS provides built-in API key authentication, subscription-based rate limiting, model discovery, and MCP server proxying — all operator-managed with zero manual proxy deployment. Developers get a single endpoint and API key for everything.
 
 ## Model Serving Strategy
 
@@ -83,42 +83,43 @@ flowchart LR
 * **1_mcp_servers/2_deploy_mcp_servers.ipynb**: Deploy 5 MCP servers to OpenShift (Context7, GitHub, gh-grep, Sequential Thinking, Chrome DevTools).
 * **1_mcp_servers/3_connect_ide_clients.ipynb**: Configure IDEs to connect to MCP servers via OpenShift Routes.
 
-### 2. Models as a Service (Phase 2)
+### 2. Models as a Service — Unified Gateway (Phase 2)
 
-* **2_ai_gateway/1_maas_overview.md**: MaaS architecture — how it provides managed auth, rate limiting, and API key management for RHOAI models.
-* **2_ai_gateway/2_enable_maas.ipynb**: Enable MaaS on RHOAI, create API keys, and test model access.
+* **2_ai_gateway/1_maas_overview.md**: MaaS architecture — unified gateway for models and MCP tools with managed auth, rate limiting, and API key management.
+* **2_ai_gateway/2_enable_maas.ipynb**: Enable MaaS on RHOAI, register MCP servers with the gateway, and create API keys.
 * **2_ai_gateway/3_test_model_serving.ipynb**: Test inference, streaming, rate limiting, and concurrent access.
-* **2_ai_gateway/4_ide_configuration.ipynb**: Configure IDEs to use MaaS endpoints for model calls.
-* **2_ai_gateway/5_maas_advanced.ipynb**: Advanced MaaS features — subscription rate limits, API key management, and monitoring.
+* **2_ai_gateway/4_test_mcp_servers.ipynb**: Test MCP server access through the MaaS gateway with auth enforcement.
+* **2_ai_gateway/5_ide_configuration.ipynb**: Configure IDEs to use MaaS endpoints for both model calls and MCP tools.
+* **2_ai_gateway/6_maas_advanced.ipynb**: Advanced MaaS features — subscription rate limits, API key management, and monitoring.
 
 ## Phase Comparison
 
-| Aspect | Phase 1: MCP Servers | Phase 2: MaaS |
-|--------|---------------------|---------------|
-| **What it centralizes** | Tools & capabilities | Model access & governance |
-| **Protocol** | MCP (JSON-RPC over HTTP SSE) | OpenAI-compatible HTTP API |
-| **Developer setup** | Add MCP server Route URL to IDE | Set MaaS endpoint + API key in IDE |
-| **Key benefit** | Shared tools without local install | Managed model access with auth & rate limiting |
-| **Manages** | External services (GitHub, docs, search) | RHOAI model endpoints |
+| Aspect | Phase 1: MCP Servers | Phase 2: MaaS (Unified Gateway) |
+|--------|---------------------|----------------------------------|
+| **What it centralizes** | Tools & capabilities | Model access + MCP tools + governance |
+| **Protocol** | MCP (JSON-RPC over HTTP SSE) | OpenAI API + MCP SSE (unified) |
+| **Developer setup** | Deploy MCP servers to cluster | Set single MaaS endpoint + API key in IDE |
+| **Key benefit** | Shared tools without local install | Single gateway for models + tools with auth |
+| **Manages** | External services (GitHub, docs, search) | RHOAI models + MCP server routing |
 | **Scaling** | HPA per MCP server | Operator-managed gateway + model replicas |
-| **Use together** | IDE connects to MCP servers for tools AND MaaS for model calls |
+| **Auth** | None (or manual OAuth proxy) | Built-in API key auth for all services |
 
-## Combined Architecture (Production)
+## Production Architecture
 
 ```mermaid
 flowchart LR
-    Dev[Developer IDE] -->|Tools via HTTPS| MCP[MCP Routes on OpenShift]
-    Dev -->|Model Calls via HTTPS| GW[MaaS Gateway]
+    Dev[Developer IDE] -->|Single API Key| GW[MaaS Gateway]
     GW -->|Auth + Rate Limit| M1[granite-code on RHOAI]
     GW --> M2[granite-3.3 on RHOAI]
-    MCP -->|context7| Docs[Library Docs]
-    MCP -->|github| GH[GitHub API]
-    MCP -->|chrome| Browser[Headless Chrome Pod]
+    GW -->|MCP Proxy| MCP1[GitHub MCP]
+    GW --> MCP2[Sequential Thinking]
+    GW --> MCP3[Chrome DevTools]
 ```
 
-In production, both phases work together:
-- **MCP Servers** provide the "hands" (tools the AI can use)
-- **MaaS + RHOAI** provides the "brain" (managed model inference with governance)
+In production, MaaS provides a **unified gateway**:
+- **Model inference** — the "brain" (managed model access with governance)
+- **MCP tools** — the "hands" (tools the AI can use, proxied with same auth)
+- **Single API key** — one credential for all services
 
 ## Prerequisites
 
@@ -150,13 +151,14 @@ cp sample.env .env
 oc apply -f 1_mcp_servers/manifests/
 ```
 
-5. Get endpoints:
+5. Get the unified MaaS endpoint:
 ```bash
-oc get routes -n mcp-servers       # MCP server URLs for IDE config
-
-# MaaS endpoint
+# MaaS gateway (serves both models and MCP tools)
 CLUSTER_DOMAIN=$(kubectl get ingresses.config.openshift.io cluster -o jsonpath='{.spec.domain}')
 echo "https://maas.${CLUSTER_DOMAIN}"
+
+# MCP servers are accessed via: https://maas.<domain>/mcp/<server-name>/sse
+# Models are accessed via: <model-url>/v1/chat/completions
 ```
 
 6. Follow notebooks for detailed walkthroughs.
