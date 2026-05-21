@@ -49,6 +49,7 @@ flowchart TB
 
 * **Phase 1 (MCP Servers):** Deploy MCP servers as OpenShift Services with Routes. Servers are containerized and accessible within the cluster.
 * **Phase 2 (MaaS — Unified Gateway):** Enable Models as a Service on RHOAI as a **unified gateway** for both model inference and MCP tool access. MaaS provides built-in API key authentication, subscription-based rate limiting, model discovery, and MCP server proxying — all operator-managed with zero manual proxy deployment. Developers get a single endpoint and API key for everything.
+* **Phase 3 (Run & Control):** Configure IDEs, run the coding assistant end-to-end with Cursor, and manage the platform — subscriptions, rate limits, API key lifecycle, and monitoring.
 
 > Together: models provide the **"brain"** (inference) and MCP tools provide the **"hands"** (actions) — all accessed via a single API key through the MaaS gateway.
 
@@ -92,23 +93,21 @@ flowchart LR
 * **2_ai_gateway/3_test_model_serving.ipynb**: Test inference, streaming, rate limiting, and concurrent access.
 * **2_ai_gateway/4_test_mcp_servers.ipynb**: Test MCP server access through the MaaS gateway with auth enforcement.
 
-### 3. Run & Control (Phase 3)
+### 3. Run the Coding Assistant & Centralized Control (Phase 3)
 
-* **3_run_and_control/1_ide_configuration.ipynb**: Configure IDEs to use MaaS endpoints for both model calls and MCP tools.
-* **3_run_and_control/2_run_coding_assistant.ipynb**: Test the coding assistant with Cursor IDE — code generation, MCP tools, and inline editing.
-* **3_run_and_control/3_maas_advanced.ipynb**: Advanced MaaS features — subscription rate limits, API key management, and monitoring.
+* **3_run_and_control/1_ide_configuration.ipynb**: Configure IDEs (Cursor, VS Code, Claude Code, OpenCode) to use MaaS endpoints for both model calls and MCP tools.
+* **3_run_and_control/2_run_coding_assistant.ipynb**: Run the coding assistant end-to-end with Cursor IDE — code generation, MCP tool invocation, and inline editing.
+* **3_run_and_control/3_maas_advanced.ipynb**: Centralized control — subscription rate limits, API key lifecycle management, and observability.
 
 ## Phase Comparison
 
-| Aspect | Phase 1: MCP Servers | Phase 2: MaaS (Unified Gateway) |
-|--------|---------------------|----------------------------------|
-| **What it centralizes** | Tools & capabilities | Model access + MCP tools + governance |
-| **Protocol** | MCP (JSON-RPC over HTTP SSE) | OpenAI API + MCP SSE (unified) |
-| **Developer setup** | Deploy MCP servers to cluster | Set single MaaS endpoint + API key in IDE |
-| **Key benefit** | Shared tools without local install | Single gateway for models + tools with auth |
-| **Manages** | External services (GitHub, docs, search) | RHOAI models + MCP server routing |
-| **Scaling** | HPA per MCP server | Operator-managed gateway + model replicas |
-| **Auth** | None (or manual OAuth proxy) | Built-in API key auth for all services |
+| Aspect | Phase 1: MCP Servers | Phase 2: MaaS (Unified Gateway) | Phase 3: Run & Control |
+|--------|---------------------|----------------------------------|------------------------|
+| **Focus** | Tools & capabilities | Model access + MCP tools + governance | IDE integration + operations |
+| **Protocol** | MCP (JSON-RPC over HTTP SSE) | OpenAI API + MCP SSE (unified) | IDE ↔ MaaS gateway |
+| **Developer setup** | Deploy MCP servers to cluster | Set single MaaS endpoint + API key | Configure IDE, start coding |
+| **Key benefit** | Shared tools without local install | Single gateway with auth | End-to-end coding assistant |
+| **Manages** | External services (GitHub, docs) | RHOAI models + MCP routing | Subscriptions, keys, monitoring |
 
 ## Prerequisites
 
