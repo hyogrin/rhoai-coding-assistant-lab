@@ -1,0 +1,155 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gh-grep-server-script
+  namespace: mcp-servers
+data:
+  server.js: |
+    const { McpServer } = require("@modelcontextprotocol/sdk/server/mcp.js");
+    const { SSEServerTransport } = require("@modelcontextprotocol/sdk/server/sse.js");
+    const http = require("http");
+
+    const server = new McpServer({ name: "gh-grep", version: "1.0.0" });
+
+    server.tool(
+      "search_code",
+      "Search code across GitHub repositories",
+      {
+        query: { type: "string", description: "Search query (GitHub code search syntax)" },
+        language: { type: "string", description: "Filter by programming language", optional: true },
+        org: { type: "string", description: "Filter by organization", optional: true },
+        maxResults: { type: "number", description: "Max results (default: 10)", optional: true },
+      },
+      async ({ query, language, org, maxResults = 10 }) => {
+        let q = query;
+        if (language) q += ` language:${language}`;
+        if (org) q += ` org:${org}`;
+
+        const url = `https://api.github.com/search/code?q=${encodeURIComponent(q)}&per_page=${maxResults}`;
+        const res = await fetch(url, {
+          headers: {
+            Authorization: `token ${process.env.GITHUB_TOKEN}`,
+            Accept: "application/vnd.github.v3+json",
+          },
+        });
+
+        if (!res.ok) {
+          return { content: [{ type: "text", text: `GitHub API error: ${res.status}` }] };
+        }
+
+        const data = await res.json();
+        const results = data.items.map((item) => ({
+          repo: item.repository.full_name,
+          path: item.path,
+          url: item.html_url,
+        }));
+
+        return {
+          content: [{ type: "text", text: JSON.stringify(results, null, 2) }],
+        };
+      }
+    );
+
+    const PORT = process.env.GH_GREP_PORT || 3003;
+    const httpServer = http.createServer();
+    const transport = new SSEServerTransport("/sse", httpServer);
+
+    httpServer.listen(PORT, () => {
+      console.log(`gh-grep MCP server running on http://localhost:${PORT}/sse`);
+      server.connect(transport);
+    });
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mcp-gh-grep
+  namespace: mcp-servers
+  labels:
+    app: mcp-gh-grep
+    app.kubernetes.io/part-of: code-assistant-lab
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mcp-gh-grep
+  template:
+    metadata:
+      labels:
+        app: mcp-gh-grep
+    spec:
+      containers:
+        - name: gh-grep
+          image: node:20-slim
+          command: ["sh", "-c"]
+          args:
+            - |
+              npm install @modelcontextprotocol/sdk && node /app/server.js
+          workingDir: /app
+          ports:
+            - containerPort: 3003
+              protocol: TCP
+          env:
+            - name: GITHUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: mcp-api-keys
+                  key: GITHUB_TOKEN
+            - name: GH_GREP_PORT
+              value: "3003"
+          volumeMounts:
+            - name: server-script
+              mountPath: /app/server.js
+              subPath: server.js
+          livenessProbe:
+            httpGet:
+              path: /sse
+              port: 3003
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /sse
+              port: 3003
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+      volumes:
+        - name: server-script
+          configMap:
+            name: gh-grep-server-script
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mcp-gh-grep
+  namespace: mcp-servers
+  labels:
+    app: mcp-gh-grep
+spec:
+  selector:
+    app: mcp-gh-grep
+  ports:
+    - port: 3003
+      targetPort: 3003
+      protocol: TCP
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: mcp-gh-grep
+  namespace: mcp-servers
+spec:
+  to:
+    kind: Service
+    name: mcp-gh-grep
+  port:
+    targetPort: 3003
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect

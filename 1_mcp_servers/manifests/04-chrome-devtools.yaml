@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mcp-chrome-devtools
+  namespace: mcp-servers
+  labels:
+    app: mcp-chrome-devtools
+    app.kubernetes.io/part-of: code-assistant-lab
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mcp-chrome-devtools
+  template:
+    metadata:
+      labels:
+        app: mcp-chrome-devtools
+    spec:
+      containers:
+        - name: chrome-devtools
+          image: ghcr.io/puppeteer/puppeteer:latest
+          command: ["sh", "-c"]
+          args:
+            - |
+              npx -y supergateway \
+                --stdio 'npx -y @anthropic/mcp-server-puppeteer' \
+                --port 3004 \
+                --name chrome-devtools
+          ports:
+            - containerPort: 3004
+              protocol: TCP
+          env:
+            - name: PUPPETEER_EXECUTABLE_PATH
+              value: /usr/bin/google-chrome-stable
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+              add: ["SYS_ADMIN"]
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mcp-chrome-devtools
+  namespace: mcp-servers
+  labels:
+    app: mcp-chrome-devtools
+spec:
+  selector:
+    app: mcp-chrome-devtools
+  ports:
+    - port: 3004
+      targetPort: 3004
+      protocol: TCP
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: mcp-chrome-devtools
+  namespace: mcp-servers
+spec:
+  to:
+    kind: Service
+    name: mcp-chrome-devtools
+  port:
+    targetPort: 3004
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect

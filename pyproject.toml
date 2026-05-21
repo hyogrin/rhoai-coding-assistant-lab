@@ -1,0 +1,16 @@
+[project]
+name = "rhoai-code-assistant-lab"
+version = "0.1.0"
+description = "Hands-on lab for building centralized coding assistant infrastructure with MCP servers and Models as a Service (MaaS)"
+requires-python = ">=3.11"
+
+dependencies = [
+    "jupyter>=1.0",
+    "openai>=1.0",
+    "python-dotenv>=1.0",
+    "requests>=2.31",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

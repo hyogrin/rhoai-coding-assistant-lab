@@ -1,0 +1,86 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mcp-github
+  namespace: mcp-servers
+  labels:
+    app: mcp-github
+    app.kubernetes.io/part-of: code-assistant-lab
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mcp-github
+  template:
+    metadata:
+      labels:
+        app: mcp-github
+    spec:
+      containers:
+        - name: github
+          image: node:20-slim
+          command: ["sh", "-c"]
+          args:
+            - |
+              npx -y supergateway \
+                --stdio 'npx -y @modelcontextprotocol/server-github' \
+                --port 3002 \
+                --name github
+          ports:
+            - containerPort: 3002
+              protocol: TCP
+          env:
+            - name: GITHUB_PERSONAL_ACCESS_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: mcp-api-keys
+                  key: GITHUB_TOKEN
+          livenessProbe:
+            httpGet:
+              path: /sse
+              port: 3002
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /sse
+              port: 3002
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mcp-github
+  namespace: mcp-servers
+  labels:
+    app: mcp-github
+spec:
+  selector:
+    app: mcp-github
+  ports:
+    - port: 3002
+      targetPort: 3002
+      protocol: TCP
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: mcp-github
+  namespace: mcp-servers
+spec:
+  to:
+    kind: Service
+    name: mcp-github
+  port:
+    targetPort: 3002
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
