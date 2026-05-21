@@ -56,8 +56,8 @@ flowchart TB
     end
 
     subgraph "RHOAI Model Serving"
-        IS1[InferenceService: granite-fast]
-        IS2[InferenceService: granite-smart]
+        IS1[InferenceService: qwen-coder-14b]
+        IS2[InferenceService: qwen-coder-7b]
     end
 
     subgraph "MCP Servers (namespace: mcp-servers)"

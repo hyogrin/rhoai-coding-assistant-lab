@@ -34,15 +34,14 @@
 
 ## RHOAI Model Requirements
 
-Models will be served via vLLM on OpenShift AI. Minimum GPU requirements:
+Models will be served via vLLM on OpenShift AI. FP8-quantized models from [RedHatAI](https://huggingface.co/RedHatAI) are used for optimal performance.
 
 | Model | Parameters | Min GPU | VRAM |
 |-------|-----------|---------|------|
-| IBM Granite 3.3 2B | 2B | 1x T4 | 8GB |
-| IBM Granite 3.3 8B | 8B | 1x A10G | 24GB |
-| IBM Granite Code 34B | 34B | 2x A100 | 80GB |
+| Qwen2.5-Coder-7B-Instruct-FP8-dynamic | 7B (FP8) | 1x L10 | ~7GB |
+| Qwen2.5-Coder-14B-Instruct-FP8-dynamic | 14B (FP8) | 1x L10 | ~14GB |
 
-> **Tip:** Start with the 2B and 8B models for testing. The 34B model is optional and requires significant GPU resources.
+> **Tip:** Both models fit on a single NVIDIA L10 (24GB). Start with the 7B model for fast iteration, use the 14B for agent mode and complex tasks.
 
 ## IDE with MCP Support
 

@@ -30,9 +30,8 @@ flowchart TB
         end
 
         subgraph RHOAI["OpenShift AI Model Serving"]
-            vLLM1[vLLM - Code Model]
-            vLLM2[vLLM - General Model]
-            vLLM3[vLLM - Fast Model]
+            vLLM1[vLLM - Qwen2.5-Coder-14B]
+            vLLM2[vLLM - Qwen2.5-Coder-7B]
         end
     end
 
@@ -41,7 +40,6 @@ flowchart TB
     Auth --> RateLimit
     RateLimit -->|Model Inference| vLLM1
     RateLimit --> vLLM2
-    RateLimit --> vLLM3
     Gateway -->|MCP Proxy| MCP
 ```
 
@@ -60,18 +58,16 @@ This lab uses **models deployed on OpenShift AI** with **MaaS enabled** for mana
 ```mermaid
 flowchart LR
     IDE[Developer IDE] -->|API Key| GW[MaaS Gateway]
-    GW -->|Auth + Rate Limit| M1[granite-code on RHOAI]
-    GW --> M2[granite-3.3 on RHOAI]
-    GW --> M3[granite-3.3-small on RHOAI]
+    GW -->|Auth + Rate Limit| M1[Qwen2.5-Coder-14B on RHOAI]
+    GW --> M2[Qwen2.5-Coder-7B on RHOAI]
 ```
 
-| RHOAI Model | Use Case |
-|-------------|----------|
-| IBM Granite 3.3 2B | Autocomplete, simple tasks |
-| IBM Granite 3.3 8B | General coding, planning |
-| IBM Granite Code 34B | Complex reasoning, architecture |
+| RHOAI Model | Use Case | GPU |
+|-------------|----------|-----|
+| Qwen2.5-Coder-7B-Instruct (FP8) | Autocomplete, fast tasks | 1x L10 (24GB) |
+| Qwen2.5-Coder-14B-Instruct (FP8) | Coding, planning, agent mode | 1x L10 (24GB) |
 
-> **Note:** Model choices are configurable. Any model deployable on vLLM (Llama, Mistral, Qwen, etc.) works.
+> **Note:** Model choices are configurable. Any model deployable on vLLM works. Models from [RedHatAI on Hugging Face](https://huggingface.co/RedHatAI) are pre-quantized for optimal vLLM performance.
 
 ## What's Included
 
@@ -112,7 +108,7 @@ flowchart LR
 ## Prerequisites
 
 * Red Hat OpenShift cluster with OpenShift AI and MaaS support
-* GPU nodes for model serving (NVIDIA GPU recommended for vLLM)
+* GPU nodes for model serving (NVIDIA L10 24GB or equivalent recommended)
 * `oc` CLI with cluster-admin or appropriate RBAC
 * Python 3.11+ (for Jupyter notebooks)
 * GitHub Personal Access Token (for GitHub MCP server)

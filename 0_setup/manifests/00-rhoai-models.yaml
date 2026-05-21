@@ -41,6 +41,7 @@ spec:
         - --model=/mnt/models
         - --served-model-name={{.Name}}
         - --trust-remote-code
+        - --quantization=fp8
       env:
         - name: HF_TOKEN
           valueFrom:
@@ -61,7 +62,7 @@ spec:
 apiVersion: serving.kserve.io/v1beta1
 kind: InferenceService
 metadata:
-  name: granite-fast
+  name: qwen-coder-7b
   namespace: rhoai-models
   labels:
     app.kubernetes.io/part-of: code-assistant-lab
@@ -73,47 +74,21 @@ spec:
       modelFormat:
         name: vLLM
       runtime: vllm-runtime
-      storageUri: hf://ibm-granite/granite-3.3-2b-instruct
+      storageUri: hf://RedHatAI/Qwen2.5-Coder-7B-Instruct-FP8-dynamic
     resources:
       requests:
         cpu: "2"
-        memory: 8Gi
-        nvidia.com/gpu: "1"
-      limits:
-        cpu: "4"
         memory: 16Gi
         nvidia.com/gpu: "1"
----
-apiVersion: serving.kserve.io/v1beta1
-kind: InferenceService
-metadata:
-  name: granite-smart
-  namespace: rhoai-models
-  labels:
-    app.kubernetes.io/part-of: code-assistant-lab
-  annotations:
-    serving.kserve.io/deploymentMode: RawDeployment
-spec:
-  predictor:
-    model:
-      modelFormat:
-        name: vLLM
-      runtime: vllm-runtime
-      storageUri: hf://ibm-granite/granite-3.3-8b-instruct
-    resources:
-      requests:
+      limits:
         cpu: "4"
         memory: 24Gi
         nvidia.com/gpu: "1"
-      limits:
-        cpu: "8"
-        memory: 32Gi
-        nvidia.com/gpu: "1"
 ---
 apiVersion: serving.kserve.io/v1beta1
 kind: InferenceService
 metadata:
-  name: granite-code
+  name: qwen-coder-14b
   namespace: rhoai-models
   labels:
     app.kubernetes.io/part-of: code-assistant-lab
@@ -125,7 +100,7 @@ spec:
       modelFormat:
         name: vLLM
       runtime: vllm-runtime
-      storageUri: hf://ibm-granite/granite-3.3-8b-instruct
+      storageUri: hf://RedHatAI/Qwen2.5-Coder-14B-Instruct-FP8-dynamic
       args:
         - --max-model-len=8192
     resources:
