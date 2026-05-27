@@ -1,0 +1,96 @@
+apiVersion: serving.kserve.io/v1alpha1
+kind: LLMInferenceService
+metadata:
+  name: qwen3-coder-fp8
+  namespace: llm-d-serving
+  annotations:
+    opendatahub.io/model-type: generative
+    openshift.io/display-name: Qwen3-Coder-30B (FP8)
+    security.opendatahub.io/enable-auth: "false"
+spec:
+  model:
+    name: Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8
+    uri: hf://Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8
+  replicas: 1
+  router:
+    gateway:
+      refs:
+      - name: maas-default-gateway
+        namespace: openshift-ingress
+    route: {}
+    scheduler:
+      template:
+        containers:
+        - name: main
+          args:
+          - --pool-group
+          - inference.networking.x-k8s.io
+          - --pool-name
+          - "{{ ChildName .ObjectMeta.Name `-inference-pool` }}"
+          - --pool-namespace
+          - "{{ .ObjectMeta.Namespace }}"
+          - --zap-encoder
+          - json
+          - --grpc-port
+          - "9002"
+          - --grpc-health-port
+          - "9003"
+          - --secure-serving
+          - --model-server-metrics-scheme
+          - https
+          - --config-text
+          - |
+            apiVersion: inference.networking.x-k8s.io/v1alpha1
+            kind: EndpointPickerConfig
+            plugins:
+            - type: single-profile-handler
+            - type: queue-scorer
+            - type: kv-cache-utilization-scorer
+            - type: prefix-cache-scorer
+            schedulingProfiles:
+            - name: default
+              plugins:
+              - pluginRef: queue-scorer
+                weight: 2
+              - pluginRef: kv-cache-utilization-scorer
+                weight: 2
+              - pluginRef: prefix-cache-scorer
+                weight: 3
+          env:
+          - name: HF_HOME
+            value: /tmp/tokenizer-cache
+          volumeMounts:
+          - mountPath: /tmp/tokenizer-cache
+            name: tokenizer-cache
+        volumes:
+        - name: tokenizer-cache
+          emptyDir: {}
+  template:
+    spec:
+      tolerations:
+      - key: nvidia.com/gpu
+        operator: Exists
+        effect: NoSchedule
+      containers:
+      - name: kserve-container
+        env:
+        - name: VLLM_ADDITIONAL_ARGS
+          value: "--disable-uvicorn-access-log --max-model-len 32768 --gpu-memory-utilization 0.90 --enable-prefix-caching --enable-auto-tool-choice --tool-call-parser qwen3_coder --reasoning-parser qwen3 --kv-cache-dtype fp8"
+        - name: HF_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: hf-token
+              key: token
+        resources:
+          requests:
+            cpu: "4"
+            memory: 24Gi
+            nvidia.com/gpu: "1"
+          limits:
+            cpu: "8"
+            memory: 32Gi
+            nvidia.com/gpu: "1"
+      volumes:
+      - name: kserve-provision-location
+        persistentVolumeClaim:
+          claimName: model-cache

@@ -1,0 +1,31 @@
+apiVersion: workspace.devfile.io/v1alpha2
+kind: DevWorkspace
+metadata:
+  name: ai-coding-workspace
+  namespace: devspaces
+  labels:
+    app.kubernetes.io/part-of: code-assistant-lab
+spec:
+  started: true
+  template:
+    projects:
+      - name: sample-project
+        git:
+          remotes:
+            origin: https://github.com/hyogrin/rhoai-code-assistant-lab.git
+    components:
+      - name: dev-tools
+        container:
+          image: quay.io/devfile/universal-developer-image:ubi8-latest
+          memoryRequest: 2Gi
+          memoryLimit: 8Gi
+          cpuRequest: 500m
+          cpuLimit: 4000m
+          mountSources: true
+          env:
+            - name: MAAS_ENDPOINT
+              value: "https://maas.CLUSTER_DOMAIN"
+            - name: MAAS_API_KEY
+              value: "REPLACE_WITH_MAAS_API_KEY"
+            - name: MODEL_NAME
+              value: "Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8"

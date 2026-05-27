@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: continue-config
+  namespace: devspaces
+  labels:
+    app.kubernetes.io/part-of: code-assistant-lab
+    controller.devfile.io/mount-to-devworkspace: "true"
+    controller.devfile.io/watch-configmap: "true"
+  annotations:
+    controller.devfile.io/mount-as: subpath
+    controller.devfile.io/mount-path: /home/user/.continue
+data:
+  config.yaml: |
+    models:
+      - name: Qwen3-Coder-30B
+        provider: openai
+        model: Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8
+        apiBase: https://maas.CLUSTER_DOMAIN/v1
+        apiKey: REPLACE_WITH_MAAS_API_KEY
+        systemMessage: "You are a helpful coding assistant. Do not use XML tool-call syntax in your responses."
+    tabAutocompleteModel:
+      provider: openai
+      model: Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8
+      apiBase: https://maas.CLUSTER_DOMAIN/v1
+      apiKey: REPLACE_WITH_MAAS_API_KEY

@@ -1,0 +1,38 @@
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  name: qwen3-coder-30b
+  namespace: rhoai-models
+  labels:
+    app.kubernetes.io/part-of: code-assistant-lab
+  annotations:
+    serving.kserve.io/deploymentMode: RawDeployment
+    openshift.io/display-name: Qwen3-Coder-30B-A3B (FP8)
+spec:
+  predictor:
+    model:
+      modelFormat:
+        name: vLLM
+      runtime: vllm-runtime
+      storageUri: hf://Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8
+      args:
+        - --max-model-len=32768
+        - --enable-prefix-caching
+        - --enable-auto-tool-choice
+        - --tool-call-parser=qwen3_coder
+        - --reasoning-parser=qwen3
+        - --gpu-memory-utilization=0.90
+        - --kv-cache-dtype=fp8
+    resources:
+      requests:
+        cpu: "4"
+        memory: 24Gi
+        nvidia.com/gpu: "1"
+      limits:
+        cpu: "8"
+        memory: 32Gi
+        nvidia.com/gpu: "1"
+    tolerations:
+      - key: nvidia.com/gpu
+        operator: Exists
+        effect: NoSchedule

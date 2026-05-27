@@ -34,7 +34,9 @@
 
 ## RHOAI Model Requirements
 
-Models will be served via vLLM on OpenShift AI. FP8-quantized models from [RedHatAI](https://huggingface.co/RedHatAI) are used for optimal performance.
+Models will be served via vLLM on OpenShift AI. FP8-quantized models from [RedHatAI](https://huggingface.co/RedHatAI) and [Qwen](https://huggingface.co/Qwen) are used for optimal performance.
+
+### Lightweight Path (Phases 0–3)
 
 | Model | Parameters | Min GPU | VRAM |
 |-------|-----------|---------|------|
@@ -42,6 +44,14 @@ Models will be served via vLLM on OpenShift AI. FP8-quantized models from [RedHa
 | Qwen2.5-Coder-14B-Instruct-FP8-dynamic | 14B (FP8) | 1x L10 | ~14GB |
 
 > **Tip:** Both models fit on a single NVIDIA L10 (24GB). Start with the 7B model for fast iteration, use the 14B for agent mode and complex tasks.
+
+### Production Path (Phases 4+)
+
+| Model | Parameters | Min GPU | VRAM | Features |
+|-------|-----------|---------|------|----------|
+| Qwen3-Coder-30B-A3B-Instruct-FP8 | 30B MoE / 3B active (FP8) | 1x L40S | ~30GB | Tool calling, 32K context, prefix caching |
+
+> **Tip:** The 30B MoE model activates only 3B parameters per token, delivering 93 tok/s single-user with native tool calling support. Requires NVIDIA L40S (48GB) or A100 (80GB). Deploy via `01-rhoai-models-30b.yaml` or use `LLMInferenceService` in Phase 4 for llm-d routing.
 
 ## IDE with MCP Support
 
