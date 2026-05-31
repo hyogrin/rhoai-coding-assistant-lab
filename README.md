@@ -51,8 +51,7 @@ flowchart TB
 | **3 — Run & Control** | IDE integration & operations | End-to-end coding assistant |
 | **4 — Developer Experience** | Dev Spaces & extensions | Team-scale onboarding with pre-configured IDEs |
 | **5 — Benchmarks** | Performance validation | Capacity planning with real metrics |
-| **6 — Advanced** | Multi-accelerator & multi-cloud | Heterogeneous routing, ARO deployment |
-| **7 — Enterprise** | Production customization | SonarQube integration, system prompts, rules |
+| **6 — IDE Integration Test** | Agent mode verification | Screenshots of working coding assistant |
 
 > Together: models provide the **"brain"** (inference), MCP tools provide the **"hands"** (actions), and MaaS provides **"governance"** (auth, rate limiting, API keys) — all accessed via a single API key.
 
@@ -110,19 +109,11 @@ flowchart LR
 
 > **Requires:** EvalHub service + GuideLLM provider registered in `demo` namespace. EvalHub SA (`demo:evalhub-service`) must have RBAC to create ConfigMaps/Pods in the target namespace. See `1_benchmarks_overview.md` for details.
 
-### 6. Advanced Topics (Phase 6)
+### 6. IDE Integration Test (Phase 6)
 
-* **6_advanced/1_advanced_overview.md**: Advanced deployment patterns — multi-accelerator, multi-cloud, model caching, KV-cache optimization.
-* **6_advanced/2_multi_accelerator.md**: Multi-accelerator routing — NVIDIA + Inferentia2 with llm-d InferencePool.
-* **6_advanced/3_multi_cloud.md**: Multi-cloud reference — ROSA (AWS) vs ARO (Azure) deployment comparison.
-* **6_advanced/4_model_caching.md**: Model caching strategies — PVC persistence, EBS snapshots, OCI images, and startup optimization.
-
-### 7. Enterprise Customization (Phase 7)
-
-* **7_enterprise/1_enterprise_overview.md**: Enterprise customization tracks — team practice alignment and quality gate integration.
-* **7_enterprise/2_system_prompts.md**: System prompt engineering — global prompts, per-project rules files, and DevWorkspace templates per tech stack.
-* **7_enterprise/3_sonarqube_integration.md**: SonarQube-aware code generation — embedding quality profiles in system prompts, live findings via MCP, and pre-commit hooks.
-* **7_enterprise/4_mcp_internal_systems.md**: Internal MCP servers — Confluence, Jira, OpenAPI catalogs, and custom tool server patterns.
+* **6_ide_integration_test/1_cursor_agent_mode.md**: Cursor IDE Agent mode — model connection, MCP tool calling, multi-step workflows with screenshots.
+* **6_ide_integration_test/2_vscode_continue.md**: VS Code + Continue extension — chat, inline edit, and tool integration.
+* **6_ide_integration_test/3_claude_code_cli.md**: Claude Code CLI — terminal-based agent mode with MCP servers.
 
 ## Prerequisites
 
@@ -161,7 +152,7 @@ lola install hyo-rhoai-skills -a cursor
    - **Phases 0–3**: Core setup (models, MCP servers, MaaS gateway, IDE integration)
    - **Phase 4**: Enable Dev Spaces for team onboarding
    - **Phase 5**: Benchmark and validate capacity
-   - **Phases 6–7**: Advanced topics and enterprise customization (reference)
+   - **Phase 6**: IDE integration test — verify Agent mode with screenshots
 
 ## AI Skills (Cursor / Claude Code)
 
