@@ -1,7 +1,6 @@
 # Lola module sources for this lab
-# Install with: lola install
+# Install with: lola mod add <url> && lola install <name> -a cursor
 modules:
-  - name: agentic-collections
-    source: https://github.com/RHEcosystemAppEng/agentic-collections
+  - name: hyo-rhoai-skills
+    source: https://github.com/hyogrin/hyo-rhoai-skills.git
     type: git
-    content_dirname: rh-ai-engineer

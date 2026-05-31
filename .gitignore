@@ -12,8 +12,9 @@ build/
 # Keep .lola/sources.yml for reproducibility, ignore downloaded modules
 .lola/modules/
 
-# Cursor IDE (local user settings, not shared)
+# Cursor IDE (local config + skills installed via lola)
 .cursor/mcp.json
+.cursor/skills/
 
 # Lock files (regenerated on install)
 uv.lock

@@ -150,10 +150,11 @@ cp sample.env .env
 # Edit .env with your tokens and cluster info
 ```
 
-3. Install AI skills (optional, for Cursor IDE users):
+3. Install AI skills (optional, for Cursor/Claude Code users):
 ```bash
-# Install lola CLI, then restore AI skills from .lola/sources.yml
-lola install
+# Install lola CLI, then add RHOAI skills
+lola mod add https://github.com/hyogrin/hyo-rhoai-skills.git
+lola install hyo-rhoai-skills -a cursor
 ```
 
 4. Follow the phased approach:
@@ -162,20 +163,21 @@ lola install
    - **Phase 5**: Benchmark and validate capacity
    - **Phases 6–7**: Advanced topics and enterprise customization (reference)
 
-## AI Skills (Cursor IDE)
+## AI Skills (Cursor / Claude Code)
 
-This lab includes pre-configured [Cursor AI skills](https://docs.cursor.com/context/skills) in `.cursor/skills/` from the [Red Hat AI Engineer Agentic Pack](https://github.com/RHEcosystemAppEng/agentic-collections). These skills enable AI-assisted operations:
+This lab uses AI skills from **[hyo-rhoai-skills](https://github.com/hyogrin/hyo-rhoai-skills)** — production-ready skills for Red Hat OpenShift AI model deployment and operations. Install via `lola` (see Quick Start step 3).
+
+Key skills included:
 
 | Skill | Description |
 |-------|-------------|
-| `model-deploy` | Deploy AI/ML models with vLLM, NIM, or Caikit runtimes |
-| `hf-model-deploy` | Deploy Hugging Face models on RHOAI with best practices |
-| `ds-project-setup` | Create and configure Data Science Projects |
-| `debug-inference` | Troubleshoot failed InferenceService deployments |
-| `ai-observability` | Analyze model performance and GPU utilization |
-| `pipeline-manage` | Create and manage Data Science Pipelines |
+| `/hf-model-deploy` | Stable model weight acquisition (OCI ModelCar, S3, PVC) |
+| `/model-deploy` | Deploy AI/ML models with vLLM, NIM, or Caikit runtimes |
+| `/debug-inference` | Troubleshoot failed InferenceService deployments |
+| `/ai-observability` | Analyze model performance and GPU utilization |
+| `/ds-project-setup` | Create and configure Data Science Projects |
 
-> **Tip:** To update skills, run `lola install` which pulls the latest from the source defined in `.lola/sources.yml`.
+> **See:** [hyo-rhoai-skills README](https://github.com/hyogrin/hyo-rhoai-skills) for the full list of available skills and MCP server configurations.
 
 > **Note:** All components run within OpenShift. No external LLM API subscriptions required — models are self-hosted on RHOAI with vLLM, accessed through MaaS.
 
