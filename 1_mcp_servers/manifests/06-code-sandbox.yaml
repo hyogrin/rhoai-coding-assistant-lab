@@ -1,0 +1,206 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mcp-code-sandbox-src
+  namespace: mcp-servers
+data:
+  server.py: |
+    """MCP Code Sandbox Server — secure code execution for AI agents via SSE."""
+    import asyncio, os, time
+    from pathlib import Path
+    from mcp.server import Server
+    from mcp.server.sse import SseServerTransport
+    from mcp.types import Tool, TextContent
+    from starlette.applications import Starlette
+    from starlette.routing import Route, Mount
+    from starlette.responses import JSONResponse
+    import uvicorn
+
+    WORKSPACE = Path(os.environ.get("SANDBOX_WORKSPACE", "/tmp/sandbox-workspace"))
+    TIMEOUT = int(os.environ.get("SANDBOX_TIMEOUT", "30"))
+    PORT = int(os.environ.get("MCP_PORT", "3005"))
+    WORKSPACE.mkdir(parents=True, exist_ok=True)
+    (WORKSPACE / ".tmp").mkdir(exist_ok=True)
+
+    app = Server("code-sandbox")
+    sse = SseServerTransport("/messages/")
+
+    @app.list_tools()
+    async def list_tools():
+        return [
+            Tool(name="execute_code", description="Execute Python/Bash/Node code in sandbox",
+                 inputSchema={"type":"object","properties":{"code":{"type":"string","description":"Code to execute"},"language":{"type":"string","enum":["python","bash","node"],"default":"python"},"timeout":{"type":"integer","default":30}},"required":["code"]}),
+            Tool(name="read_file", description="Read file from sandbox workspace",
+                 inputSchema={"type":"object","properties":{"path":{"type":"string","description":"Relative path"}},"required":["path"]}),
+            Tool(name="write_file", description="Write file to sandbox workspace",
+                 inputSchema={"type":"object","properties":{"path":{"type":"string"},"content":{"type":"string"}},"required":["path","content"]}),
+            Tool(name="list_files", description="List directory in sandbox workspace",
+                 inputSchema={"type":"object","properties":{"path":{"type":"string","default":"."}}}),
+        ]
+
+    @app.call_tool()
+    async def call_tool(name: str, arguments: dict):
+        if name == "execute_code": return await _exec(arguments)
+        elif name == "read_file": return await _read(arguments)
+        elif name == "write_file": return await _write(arguments)
+        elif name == "list_files": return await _ls(arguments)
+        return [TextContent(type="text", text=f"Unknown tool: {name}")]
+
+    async def _exec(args):
+        code, lang = args.get("code",""), args.get("language","python")
+        timeout = min(args.get("timeout", TIMEOUT), 60)
+        cmds = {"python":["python3","-c"],"bash":["bash","-c"],"node":["node","-e"]}
+        if lang not in cmds:
+            return [TextContent(type="text", text=f"Unsupported: {lang}")]
+        t0 = time.time()
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                *cmds[lang], code, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+                cwd=str(WORKSPACE), env={**os.environ, "HOME": str(WORKSPACE), "TMPDIR": str(WORKSPACE/".tmp")})
+            stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=timeout)
+            elapsed = round(time.time()-t0, 2)
+            parts = []
+            if stdout.strip(): parts.append(f"stdout:\n{stdout.decode(errors='replace').strip()}")
+            if stderr.strip(): parts.append(f"stderr:\n{stderr.decode(errors='replace').strip()}")
+            status = "OK" if proc.returncode == 0 else f"EXIT {proc.returncode}"
+            return [TextContent(type="text", text=f"[{lang}] {status} ({elapsed}s)\n\n"+("\n\n".join(parts) or "(no output)"))]
+        except asyncio.TimeoutError:
+            proc.kill()
+            return [TextContent(type="text", text=f"[{lang}] TIMEOUT after {timeout}s")]
+        except Exception as e:
+            return [TextContent(type="text", text=f"[{lang}] ERROR: {e}")]
+
+    async def _read(args):
+        target = (WORKSPACE / args.get("path","")).resolve()
+        if not str(target).startswith(str(WORKSPACE.resolve())):
+            return [TextContent(type="text", text="ERROR: Path escapes workspace")]
+        if not target.is_file():
+            return [TextContent(type="text", text=f"ERROR: Not found: {args.get('path')}")]
+        return [TextContent(type="text", text=target.read_text(errors="replace"))]
+
+    async def _write(args):
+        target = (WORKSPACE / args.get("path","")).resolve()
+        if not str(target).startswith(str(WORKSPACE.resolve())):
+            return [TextContent(type="text", text="ERROR: Path escapes workspace")]
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(args.get("content",""))
+        return [TextContent(type="text", text=f"OK: Written {len(args.get('content',''))} bytes")]
+
+    async def _ls(args):
+        target = (WORKSPACE / args.get("path",".")).resolve()
+        if not str(target).startswith(str(WORKSPACE.resolve())):
+            return [TextContent(type="text", text="ERROR: Path escapes workspace")]
+        if not target.is_dir():
+            return [TextContent(type="text", text=f"ERROR: Not a directory")]
+        entries = []
+        for item in sorted(target.iterdir()):
+            p = "d " if item.is_dir() else "f "
+            entries.append(f"{p}{item.name}")
+        return [TextContent(type="text", text="\n".join(entries) or "(empty)")]
+
+    async def handle_sse(request):
+        async with sse.connect_sse(request.scope, request.receive, request._send) as streams:
+            await app.run(streams[0], streams[1], app.create_initialization_options())
+
+    async def health(request):
+        return JSONResponse({"status": "ok", "server": "code-sandbox"})
+
+    starlette_app = Starlette(
+        routes=[
+            Route("/health", health),
+            Route("/sse", endpoint=handle_sse),
+            Mount("/messages/", app=sse.handle_post_message),
+        ]
+    )
+
+    if __name__ == "__main__":
+        uvicorn.run(starlette_app, host="0.0.0.0", port=PORT)
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mcp-code-sandbox
+  namespace: mcp-servers
+  labels:
+    app: mcp-code-sandbox
+    app.kubernetes.io/part-of: code-assistant-lab
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mcp-code-sandbox
+  template:
+    metadata:
+      labels:
+        app: mcp-code-sandbox
+    spec:
+      containers:
+        - name: code-sandbox
+          image: registry.access.redhat.com/ubi9/python-311:latest
+          command: ["sh", "-c"]
+          args:
+            - |
+              pip install -q "mcp[cli]>=1.0.0" uvicorn starlette sse-starlette &&
+              python3 /app/server.py
+          ports:
+            - containerPort: 3005
+              protocol: TCP
+          env:
+            - name: HOME
+              value: /tmp
+            - name: SANDBOX_WORKSPACE
+              value: /tmp/sandbox-workspace
+            - name: SANDBOX_TIMEOUT
+              value: "30"
+            - name: MCP_PORT
+              value: "3005"
+          volumeMounts:
+            - name: source
+              mountPath: /app/server.py
+              subPath: server.py
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+      volumes:
+        - name: source
+          configMap:
+            name: mcp-code-sandbox-src
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mcp-code-sandbox
+  namespace: mcp-servers
+  labels:
+    app: mcp-code-sandbox
+spec:
+  selector:
+    app: mcp-code-sandbox
+  ports:
+    - port: 3005
+      targetPort: 3005
+      protocol: TCP
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: mcp-code-sandbox
+  namespace: mcp-servers
+spec:
+  to:
+    kind: Service
+    name: mcp-code-sandbox
+  port:
+    targetPort: 3005
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect

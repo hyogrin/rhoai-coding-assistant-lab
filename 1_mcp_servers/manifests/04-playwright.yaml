@@ -1,43 +1,46 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: mcp-chrome-devtools
+  name: mcp-playwright
   namespace: mcp-servers
   labels:
-    app: mcp-chrome-devtools
+    app: mcp-playwright
     app.kubernetes.io/part-of: code-assistant-lab
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: mcp-chrome-devtools
+      app: mcp-playwright
   template:
     metadata:
       labels:
-        app: mcp-chrome-devtools
+        app: mcp-playwright
     spec:
       containers:
-        - name: chrome-devtools
-          image: ghcr.io/puppeteer/puppeteer:latest
+        - name: playwright
+          image: mcr.microsoft.com/playwright:v1.52.0-noble
           command: ["sh", "-c"]
           args:
             - |
               npx -y supergateway \
-                --stdio 'npx -y @anthropic/mcp-server-puppeteer' \
+                --stdio 'npx -y @playwright/mcp@latest --headless' \
                 --port 3004 \
-                --name chrome-devtools
+                --name playwright
           ports:
             - containerPort: 3004
               protocol: TCP
           env:
-            - name: PUPPETEER_EXECUTABLE_PATH
-              value: /usr/bin/google-chrome-stable
+            - name: HOME
+              value: /tmp
+            - name: NPM_CONFIG_CACHE
+              value: /tmp/.npm
+            - name: PLAYWRIGHT_CHROMIUM_SANDBOX
+              value: "false"
           securityContext:
             runAsNonRoot: true
             allowPrivilegeEscalation: false
             capabilities:
               drop: ["ALL"]
-              add: ["SYS_ADMIN"]
           resources:
             requests:
               cpu: 200m
@@ -49,13 +52,13 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: mcp-chrome-devtools
+  name: mcp-playwright
   namespace: mcp-servers
   labels:
-    app: mcp-chrome-devtools
+    app: mcp-playwright
 spec:
   selector:
-    app: mcp-chrome-devtools
+    app: mcp-playwright
   ports:
     - port: 3004
       targetPort: 3004
@@ -64,12 +67,12 @@ spec:
 apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
-  name: mcp-chrome-devtools
+  name: mcp-playwright
   namespace: mcp-servers
 spec:
   to:
     kind: Service
-    name: mcp-chrome-devtools
+    name: mcp-playwright
   port:
     targetPort: 3004
   tls:

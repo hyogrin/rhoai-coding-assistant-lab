@@ -1,0 +1,36 @@
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  name: qwen25-coder-7b
+  namespace: rhoai-models
+  labels:
+    opendatahub.io/dashboard: "true"
+    app.kubernetes.io/part-of: code-assistant-lab
+  annotations:
+    serving.kserve.io/deploymentMode: RawDeployment
+    openshift.io/display-name: "Qwen2.5-Coder-7B Instruct (OCI ModelCar)"
+spec:
+  predictor:
+    tolerations:
+      - key: nvidia.com/gpu
+        operator: Exists
+        effect: NoSchedule
+    model:
+      modelFormat:
+        name: vLLM
+      runtime: vllm-runtime
+      storageUri: oci://quay.io/redhat-ai-services/modelcar-catalog:qwen2.5-7b-instruct
+      args:
+        - --max-model-len=16384
+        - --gpu-memory-utilization=0.90
+        - --enable-auto-tool-choice
+        - --tool-call-parser=hermes
+      resources:
+        requests:
+          cpu: "4"
+          memory: 24Gi
+          nvidia.com/gpu: "1"
+        limits:
+          cpu: "8"
+          memory: 48Gi
+          nvidia.com/gpu: "1"

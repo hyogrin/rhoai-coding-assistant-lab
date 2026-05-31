@@ -26,20 +26,23 @@ spec:
                 --stdio 'npx -y @modelcontextprotocol/server-sequential-thinking' \
                 --port 3001 \
                 --name sequential-thinking
+          env:
+            - name: HOME
+              value: /tmp
+            - name: NPM_CONFIG_CACHE
+              value: /tmp/.npm
           ports:
             - containerPort: 3001
               protocol: TCP
           livenessProbe:
-            httpGet:
-              path: /sse
+            tcpSocket:
               port: 3001
             initialDelaySeconds: 30
             periodSeconds: 30
           readinessProbe:
-            httpGet:
-              path: /sse
+            tcpSocket:
               port: 3001
-            initialDelaySeconds: 10
+            initialDelaySeconds: 15
             periodSeconds: 10
           resources:
             requests:

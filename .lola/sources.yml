@@ -1,0 +1,7 @@
+# Lola module sources for this lab
+# Install with: lola install
+modules:
+  - name: agentic-collections
+    source: https://github.com/RHEcosystemAppEng/agentic-collections
+    type: git
+    content_dirname: rh-ai-engineer

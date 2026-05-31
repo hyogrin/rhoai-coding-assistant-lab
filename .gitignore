@@ -7,3 +7,22 @@ __pycache__/
 *.egg-info/
 dist/
 build/
+
+# Lola modules (installed via `lola install` from .lola/sources.yml)
+# Keep .lola/sources.yml for reproducibility, ignore downloaded modules
+.lola/modules/
+
+# Cursor IDE (local user settings, not shared)
+.cursor/mcp.json
+
+# Lock files (regenerated on install)
+uv.lock
+
+# Benchmark output artifacts (generated during runs)
+5_benchmarks/outputs/
+
+# Reference files (temporary, not part of lab content)
+ref/
+
+# Agent transcripts
+agent-transcripts/

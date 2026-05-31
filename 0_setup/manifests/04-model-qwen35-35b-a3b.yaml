@@ -1,0 +1,37 @@
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  name: qwen35-35b-a3b
+  namespace: rhoai-models
+  labels:
+    opendatahub.io/dashboard: "true"
+    app.kubernetes.io/part-of: code-assistant-lab
+  annotations:
+    serving.kserve.io/deploymentMode: RawDeployment
+    openshift.io/display-name: "Qwen3.5-35B-A3B (FP8) - MoE Code Assistant"
+spec:
+  predictor:
+    tolerations:
+      - key: nvidia.com/gpu
+        operator: Exists
+        effect: NoSchedule
+    model:
+      modelFormat:
+        name: vLLM
+      runtime: vllm-runtime
+      storageUri: hf://RedHatAI/Qwen3.5-35B-A3B-FP8-dynamic
+      args:
+        - --max-model-len=4096
+        - --gpu-memory-utilization=0.97
+        - --reasoning-parser=qwen3
+        - --enable-auto-tool-choice
+        - --tool-call-parser=qwen3_coder
+      resources:
+        requests:
+          cpu: "4"
+          memory: 24Gi
+          nvidia.com/gpu: "1"
+        limits:
+          cpu: "8"
+          memory: 48Gi
+          nvidia.com/gpu: "1"

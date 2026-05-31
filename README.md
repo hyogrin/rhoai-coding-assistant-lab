@@ -1,6 +1,6 @@
 # RHOAI Code Assistant Lab
 
-A hands-on workshop for building a **centralized coding assistant infrastructure** on **Red Hat OpenShift AI (RHOAI)**. This lab guides you through deploying shared MCP tool servers, enabling **Models as a Service (MaaS)** for managed model access, **llm-d intelligent routing** for production-grade inference, and **Dev Spaces** for team-scale developer onboarding — no external LLM API keys required.
+A hands-on workshop for building a **centralized coding assistant infrastructure** on **Red Hat OpenShift AI (RHOAI)**. This lab guides you through deploying shared MCP tool servers, enabling **Models as a Service (MaaS)** for managed model access, and **Dev Spaces** for team-scale developer onboarding — no external LLM API keys required.
 
 ## Architecture
 
@@ -22,37 +22,22 @@ flowchart TB
         end
 
         subgraph MCP["MCP Servers (namespace: mcp-servers)"]
+            SeqThink[Sequential Thinking]
+            CodeSandbox[Code Sandbox]
             Context7[Context7 - Library Docs]
             GitHub[GitHub MCP - Repo Ops]
-            GHGrep[gh-grep - Code Search]
-            SeqThink[Sequential Thinking]
-            Chrome[Chrome DevTools]
+            Playwright[Playwright - Browser]
         end
 
-        subgraph LLMd["llm-d Intelligent Routing"]
-            EPP[Endpoint Picker]
-            PrefixScorer[Prefix Cache Scorer]
-            KVScorer[KV Cache Scorer]
-            QueueScorer[Queue Depth Scorer]
-        end
-
-        subgraph Inference["Model Serving (Multi-Accelerator)"]
-            vLLM1[vLLM - Qwen3-Coder-30B FP8]
-            vLLM2[vLLM - Replica 2]
-            vLLM3[vLLM - Overflow / Inferentia]
+        subgraph Inference["Model Serving (vLLM on RHOAI)"]
+            vLLM1[vLLM - Qwen2.5-Coder-7B]
         end
     end
 
     IDE -->|Single API Key / HTTPS| Gateway
     Gateway --> Auth
     Auth --> RateLimit
-    RateLimit -->|Model Inference| EPP
-    EPP --> PrefixScorer
-    EPP --> KVScorer
-    EPP --> QueueScorer
-    EPP -->|Optimal Pod| vLLM1
-    EPP --> vLLM2
-    EPP --> vLLM3
+    RateLimit -->|Model Inference| vLLM1
     Gateway -->|MCP Proxy| MCP
 ```
 
@@ -64,33 +49,26 @@ flowchart TB
 | **1 — MCP Servers** | Deploy shared tool servers | MCP tools accessible via Routes |
 | **2 — MaaS Gateway** | Unified gateway with auth | Single API key for models + MCP tools |
 | **3 — Run & Control** | IDE integration & operations | End-to-end coding assistant |
-| **4 — llm-d Routing** | Intelligent inference routing | Prefix-cache-aware, KV-optimized routing |
-| **5 — Developer Experience** | Dev Spaces & extensions | Team-scale onboarding with pre-configured IDEs |
-| **6 — Benchmarks** | Performance validation | Capacity planning with real metrics |
-| **7 — Advanced** | Multi-accelerator & multi-cloud | Heterogeneous routing, ARO deployment |
-| **8 — Enterprise** | Production customization | SonarQube integration, system prompts, rules |
+| **4 — Developer Experience** | Dev Spaces & extensions | Team-scale onboarding with pre-configured IDEs |
+| **5 — Benchmarks** | Performance validation | Capacity planning with real metrics |
+| **6 — Advanced** | Multi-accelerator & multi-cloud | Heterogeneous routing, ARO deployment |
+| **7 — Enterprise** | Production customization | SonarQube integration, system prompts, rules |
 
-> Together: models provide the **"brain"** (inference), MCP tools provide the **"hands"** (actions), llm-d provides **"intelligence"** (optimal routing), and MaaS provides **"governance"** (auth, rate limiting, API keys) — all accessed via a single API key.
+> Together: models provide the **"brain"** (inference), MCP tools provide the **"hands"** (actions), and MaaS provides **"governance"** (auth, rate limiting, API keys) — all accessed via a single API key.
 
 ## Model Serving Strategy
-
-This lab supports two deployment paths that can be used independently or layered together:
 
 ```mermaid
 flowchart LR
     IDE[Developer IDE] -->|API Key| GW[MaaS Gateway]
-    GW -->|Auth + Rate Limit| EPP[llm-d EPP]
-    EPP -->|Prefix-cache aware| M1[Qwen3-Coder-30B Replica 1]
-    EPP -->|KV-cache aware| M2[Qwen3-Coder-30B Replica 2]
+    GW -->|Auth + Rate Limit| Model[vLLM - Qwen2.5-Coder-7B]
 ```
 
 | Model | Use Case | GPU | Deployment |
 |-------|----------|-----|------------|
-| Qwen2.5-Coder-7B-Instruct (FP8) | Autocomplete, fast tasks | 1x L10 (24GB) | InferenceService (Phase 0) |
-| Qwen2.5-Coder-14B-Instruct (FP8) | Coding, planning | 1x L10 (24GB) | InferenceService (Phase 0) |
-| Qwen3-Coder-30B-A3B-Instruct (FP8) | Agent mode, tool calling | 1x L40S (48GB) | LLMInferenceService + llm-d (Phase 4) |
+| Qwen2.5-Coder-7B-Instruct | Coding, autocomplete, tool calling | 1x L4/L10 (24GB) | InferenceService via OCI ModelCar |
 
-> **Note:** Model choices are configurable. Any model deployable on vLLM works. Models from [RedHatAI on Hugging Face](https://huggingface.co/RedHatAI) are pre-quantized for optimal vLLM performance.
+> **Note:** Model choices are configurable. Any model deployable on vLLM works. Models from [RedHatAI on Hugging Face](https://huggingface.co/RedHatAI) are pre-quantized for optimal vLLM performance. For multi-replica production workloads, consider upgrading to `LLMInferenceService` with llm-d intelligent routing.
 
 ## What's Included
 
@@ -102,7 +80,7 @@ flowchart LR
 ### 1. MCP Servers (Phase 1)
 
 * **1_mcp_servers/1_mcp_overview.md**: Introduction to MCP protocol, server types, and deployment strategies on OpenShift.
-* **1_mcp_servers/2_deploy_mcp_servers.ipynb**: Deploy 5 MCP servers to OpenShift (Context7, GitHub, gh-grep, Sequential Thinking, Chrome DevTools).
+* **1_mcp_servers/2_deploy_mcp_servers.ipynb**: Deploy 6 MCP servers to OpenShift (Sequential Thinking, Code Sandbox, Context7, GitHub, gh-grep, Playwright).
 * **1_mcp_servers/3_connect_ide_clients.ipynb**: Configure IDEs to connect to MCP servers via OpenShift Routes.
 
 ### 2. Models as a Service — Unified Gateway (Phase 2)
@@ -118,50 +96,43 @@ flowchart LR
 * **3_run_and_control/2_run_coding_assistant.ipynb**: Run the coding assistant end-to-end with Cursor IDE — code generation, MCP tool invocation, and inline editing.
 * **3_run_and_control/3_maas_advanced.ipynb**: Centralized control — subscription rate limits, API key lifecycle management, and observability.
 
-### 4. llm-d Intelligent Routing (Phase 4)
+### 4. Developer Experience — Dev Spaces (Phase 4)
 
-* **4_llm_d_routing/1_llmd_overview.md**: llm-d architecture — EPP scoring (prefix-cache, KV-cache, queue-depth), LLMInferenceService CRD, and benefits for code assistant workloads.
-* **4_llm_d_routing/2_deploy_llmd.ipynb**: Deploy LLMInferenceService with Qwen3-Coder-30B, verify EPP discovery, and test prefix-cache behavior.
-* **4_llm_d_routing/3_verify_routing.ipynb**: Verify intelligent routing — concurrent request distribution, prefix-cache-aware pod selection, and latency comparison.
+* **4_developer_experience/1_devspaces_overview.md**: Dev Spaces integration — AI extension comparison (Continue vs Cline vs Roo Code), tool calling configuration, and DevWorkspace architecture.
+* **4_developer_experience/2_configure_devworkspace.ipynb**: Deploy DevWorkspace with pre-configured AI extensions connected to MaaS gateway.
+* **4_developer_experience/3_test_extensions.ipynb**: Test tool calling, streaming behavior, and troubleshoot common extension issues.
 
-### 5. Developer Experience — Dev Spaces (Phase 5)
+### 5. Performance Benchmarks (Phase 5)
 
-* **5_developer_experience/1_devspaces_overview.md**: Dev Spaces integration — AI extension comparison (Continue vs Cline vs Roo Code), tool calling configuration, and DevWorkspace architecture.
-* **5_developer_experience/2_configure_devworkspace.ipynb**: Deploy DevWorkspace with pre-configured AI extensions connected to MaaS gateway.
-* **5_developer_experience/3_test_extensions.ipynb**: Test tool calling, streaming behavior, and troubleshoot common extension issues.
+* **5_benchmarks/1_benchmarks_overview.md**: Benchmarking methodology — GuideLLM, key metrics (TTFT, ITL, tok/s), capacity planning, and reference GPU performance data.
+* **5_benchmarks/2_run_benchmarks.ipynb**: Run GuideLLM benchmarks via EvalHub SDK — single-user latency, sweep, and throughput tests with automatic MLflow tracking.
+* **5_benchmarks/3_capacity_planning.ipynb**: Translate benchmark results into team capacity — multi-replica projections and cost analysis.
 
-### 6. Performance Benchmarks (Phase 6)
+> **Requires:** EvalHub service + GuideLLM provider registered in `demo` namespace. EvalHub SA (`demo:evalhub-service`) must have RBAC to create ConfigMaps/Pods in the target namespace. See `1_benchmarks_overview.md` for details.
 
-* **6_benchmarks/1_benchmarks_overview.md**: Benchmarking methodology — GuideLLM, key metrics (TTFT, ITL, tok/s), capacity planning, and reference GPU performance data.
-* **6_benchmarks/2_run_benchmarks.ipynb**: Run GuideLLM sweep benchmarks — single-user latency, throughput, and constant-rate tests.
-* **6_benchmarks/3_capacity_planning.ipynb**: Translate benchmark results into team capacity — multi-replica projections and cost analysis.
+### 6. Advanced Topics (Phase 6)
 
-### 7. Advanced Topics (Phase 7)
+* **6_advanced/1_advanced_overview.md**: Advanced deployment patterns — multi-accelerator, multi-cloud, model caching, KV-cache optimization.
+* **6_advanced/2_multi_accelerator.md**: Multi-accelerator routing — NVIDIA + Inferentia2 with llm-d InferencePool.
+* **6_advanced/3_multi_cloud.md**: Multi-cloud reference — ROSA (AWS) vs ARO (Azure) deployment comparison.
+* **6_advanced/4_model_caching.md**: Model caching strategies — PVC persistence, EBS snapshots, OCI images, and startup optimization.
 
-* **7_advanced/1_advanced_overview.md**: Advanced deployment patterns — multi-accelerator, multi-cloud, model caching, KV-cache optimization.
-* **7_advanced/2_multi_accelerator.md**: Heterogeneous llm-d routing — NVIDIA + Inferentia2 in a single InferencePool.
-* **7_advanced/3_multi_cloud.md**: Multi-cloud reference — ROSA (AWS) vs ARO (Azure) deployment comparison.
-* **7_advanced/4_model_caching.md**: Model caching strategies — PVC persistence, EBS snapshots, OCI images, and startup optimization.
+### 7. Enterprise Customization (Phase 7)
 
-### 8. Enterprise Customization (Phase 8)
-
-* **8_enterprise/1_enterprise_overview.md**: Enterprise customization tracks — team practice alignment and quality gate integration.
-* **8_enterprise/2_system_prompts.md**: System prompt engineering — global prompts, per-project rules files, and DevWorkspace templates per tech stack.
-* **8_enterprise/3_sonarqube_integration.md**: SonarQube-aware code generation — embedding quality profiles in system prompts, live findings via MCP, and pre-commit hooks.
-* **8_enterprise/4_mcp_internal_systems.md**: Internal MCP servers — Confluence, Jira, OpenAPI catalogs, and custom tool server patterns.
+* **7_enterprise/1_enterprise_overview.md**: Enterprise customization tracks — team practice alignment and quality gate integration.
+* **7_enterprise/2_system_prompts.md**: System prompt engineering — global prompts, per-project rules files, and DevWorkspace templates per tech stack.
+* **7_enterprise/3_sonarqube_integration.md**: SonarQube-aware code generation — embedding quality profiles in system prompts, live findings via MCP, and pre-commit hooks.
+* **7_enterprise/4_mcp_internal_systems.md**: Internal MCP servers — Confluence, Jira, OpenAPI catalogs, and custom tool server patterns.
 
 ## Prerequisites
 
 | Component | Version | Purpose |
 |-----------|---------|---------|
 | Red Hat OpenShift | 4.14+ | Container platform |
-| OpenShift AI (RHOAI) | 2.x+ (3.3+ for llm-d) | Model serving with vLLM + MaaS + llm-d |
+| OpenShift AI (RHOAI) | 2.x+ | Model serving with vLLM + MaaS |
 | MaaS (Models as a Service) | — | Managed model gateway with auth & rate limiting |
-| Service Mesh 3 | 3.2+ | Gateway API with ext_proc for llm-d |
 | NVIDIA GPU Operator | — | GPU support for model inference |
-| LeaderWorkerSet Operator | 1.0+ | Required for LLMInferenceService |
-| cert-manager | 1.18+ | TLS certificate management |
-| OpenShift Dev Spaces | 3.27+ | Cloud development environments (Phase 5) |
+| OpenShift Dev Spaces | 3.27+ | Cloud development environments (Phase 4) |
 | `oc` CLI | 4.14+ | Cluster management |
 | Python | 3.11+ | Jupyter notebooks |
 
@@ -179,12 +150,32 @@ cp sample.env .env
 # Edit .env with your tokens and cluster info
 ```
 
-3. Follow the phased approach:
+3. Install AI skills (optional, for Cursor IDE users):
+```bash
+# Install lola CLI, then restore AI skills from .lola/sources.yml
+lola install
+```
+
+4. Follow the phased approach:
    - **Phases 0–3**: Core setup (models, MCP servers, MaaS gateway, IDE integration)
-   - **Phase 4**: Upgrade to llm-d intelligent routing (production-grade inference)
-   - **Phase 5**: Enable Dev Spaces for team onboarding
-   - **Phase 6**: Benchmark and validate capacity
-   - **Phases 7–8**: Advanced topics and enterprise customization (reference)
+   - **Phase 4**: Enable Dev Spaces for team onboarding
+   - **Phase 5**: Benchmark and validate capacity
+   - **Phases 6–7**: Advanced topics and enterprise customization (reference)
+
+## AI Skills (Cursor IDE)
+
+This lab includes pre-configured [Cursor AI skills](https://docs.cursor.com/context/skills) in `.cursor/skills/` from the [Red Hat AI Engineer Agentic Pack](https://github.com/RHEcosystemAppEng/agentic-collections). These skills enable AI-assisted operations:
+
+| Skill | Description |
+|-------|-------------|
+| `model-deploy` | Deploy AI/ML models with vLLM, NIM, or Caikit runtimes |
+| `hf-model-deploy` | Deploy Hugging Face models on RHOAI with best practices |
+| `ds-project-setup` | Create and configure Data Science Projects |
+| `debug-inference` | Troubleshoot failed InferenceService deployments |
+| `ai-observability` | Analyze model performance and GPU utilization |
+| `pipeline-manage` | Create and manage Data Science Pipelines |
+
+> **Tip:** To update skills, run `lola install` which pulls the latest from the source defined in `.lola/sources.yml`.
 
 > **Note:** All components run within OpenShift. No external LLM API subscriptions required — models are self-hosted on RHOAI with vLLM, accessed through MaaS.
 
@@ -194,4 +185,4 @@ cp sample.env .env
 
 ## About
 
-This workshop demonstrates how to build a fully self-contained, enterprise-grade coding assistant infrastructure on Red Hat OpenShift AI — from model serving and intelligent routing, through tool integration and developer onboarding, to performance validation and enterprise customization — without dependency on external AI API providers.
+This workshop demonstrates how to build a fully self-contained, enterprise-grade coding assistant infrastructure on Red Hat OpenShift AI — from model serving through tool integration and developer onboarding, to performance validation and enterprise customization — without dependency on external AI API providers.

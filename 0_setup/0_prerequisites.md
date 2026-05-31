@@ -51,7 +51,7 @@ Models will be served via vLLM on OpenShift AI. FP8-quantized models from [RedHa
 |-------|-----------|---------|------|----------|
 | Qwen3-Coder-30B-A3B-Instruct-FP8 | 30B MoE / 3B active (FP8) | 1x L40S | ~30GB | Tool calling, 32K context, prefix caching |
 
-> **Tip:** The 30B MoE model activates only 3B parameters per token, delivering 93 tok/s single-user with native tool calling support. Requires NVIDIA L40S (48GB) or A100 (80GB). Deploy via `01-rhoai-models-30b.yaml` or use `LLMInferenceService` in Phase 4 for llm-d routing.
+> **Tip:** The 30B MoE model activates only 3B parameters per token, delivering 93 tok/s single-user with native tool calling support. Requires NVIDIA L40S (48GB) or A100 (80GB). Deploy via `01-rhoai-models-30b.yaml`.
 
 ## IDE with MCP Support
 

@@ -113,7 +113,7 @@ curl -sk "${MAAS_ENDPOINT}/mcp/<server-name>/sse" \
 
 ## Important Notes
 
-> **Direct Access Caveat:** When MaaS is enabled for a model served using llm-d, the direct HTTPRoute to the model remains valid:
+> **Direct Access Caveat:** When MaaS is enabled, the direct HTTPRoute to the model remains valid:
 > - `https://maas.apps.<domain>/maas-api/v1/...` → Goes through MaaS Gateway (auth + rate limiting enforced)
 > - `https://maas.apps.<domain>/<namespace>/<model-id>/v1/...` → Goes to the model directly, bypassing MaaS
 >

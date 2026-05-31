@@ -5,6 +5,8 @@ metadata:
   labels:
     app.kubernetes.io/part-of: code-assistant-lab
     opendatahub.io/dashboard: "true"
+  annotations:
+    openshift.io/display-name: "RHOAI Models - Code Assistant Lab"
 ---
 apiVersion: v1
 kind: Secret
@@ -22,6 +24,8 @@ metadata:
   namespace: rhoai-models
   labels:
     opendatahub.io/dashboard: "true"
+  annotations:
+    openshift.io/display-name: "vLLM ServingRuntime (FP8)"
 spec:
   annotations:
     openshift.io/display-name: vLLM ServingRuntime
@@ -31,9 +35,9 @@ spec:
   multiModel: false
   containers:
     - name: kserve-container
-      image: quay.io/modh/vllm:rhoai-2.16
+      image: registry.redhat.io/rhaii/vllm-cuda-rhel9:3.4.0
       command:
-        - python
+        - python3
         - -m
         - vllm.entrypoints.openai.api_server
       args:
@@ -41,7 +45,7 @@ spec:
         - --model=/mnt/models
         - --served-model-name={{.Name}}
         - --trust-remote-code
-        - --quantization=fp8
+        - --max-model-len=16384
       env:
         - name: HF_TOKEN
           valueFrom:
@@ -58,57 +62,3 @@ spec:
         limits:
           cpu: "4"
           memory: 16Gi
----
-apiVersion: serving.kserve.io/v1beta1
-kind: InferenceService
-metadata:
-  name: qwen-coder-7b
-  namespace: rhoai-models
-  labels:
-    app.kubernetes.io/part-of: code-assistant-lab
-  annotations:
-    serving.kserve.io/deploymentMode: RawDeployment
-spec:
-  predictor:
-    model:
-      modelFormat:
-        name: vLLM
-      runtime: vllm-runtime
-      storageUri: hf://RedHatAI/Qwen2.5-Coder-7B-Instruct-FP8-dynamic
-    resources:
-      requests:
-        cpu: "2"
-        memory: 16Gi
-        nvidia.com/gpu: "1"
-      limits:
-        cpu: "4"
-        memory: 24Gi
-        nvidia.com/gpu: "1"
----
-apiVersion: serving.kserve.io/v1beta1
-kind: InferenceService
-metadata:
-  name: qwen-coder-14b
-  namespace: rhoai-models
-  labels:
-    app.kubernetes.io/part-of: code-assistant-lab
-  annotations:
-    serving.kserve.io/deploymentMode: RawDeployment
-spec:
-  predictor:
-    model:
-      modelFormat:
-        name: vLLM
-      runtime: vllm-runtime
-      storageUri: hf://RedHatAI/Qwen2.5-Coder-14B-Instruct-FP8-dynamic
-      args:
-        - --max-model-len=8192
-    resources:
-      requests:
-        cpu: "4"
-        memory: 24Gi
-        nvidia.com/gpu: "1"
-      limits:
-        cpu: "8"
-        memory: 32Gi
-        nvidia.com/gpu: "1"

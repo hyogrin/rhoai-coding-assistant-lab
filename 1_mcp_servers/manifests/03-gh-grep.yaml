@@ -7,6 +7,7 @@ data:
   server.js: |
     const { McpServer } = require("@modelcontextprotocol/sdk/server/mcp.js");
     const { SSEServerTransport } = require("@modelcontextprotocol/sdk/server/sse.js");
+    const { z } = require("zod");
     const http = require("http");
 
     const server = new McpServer({ name: "gh-grep", version: "1.0.0" });
@@ -15,17 +16,17 @@ data:
       "search_code",
       "Search code across GitHub repositories",
       {
-        query: { type: "string", description: "Search query (GitHub code search syntax)" },
-        language: { type: "string", description: "Filter by programming language", optional: true },
-        org: { type: "string", description: "Filter by organization", optional: true },
-        maxResults: { type: "number", description: "Max results (default: 10)", optional: true },
+        query: z.string().describe("Search query (GitHub code search syntax)"),
+        language: z.string().optional().describe("Filter by programming language"),
+        org: z.string().optional().describe("Filter by organization"),
+        maxResults: z.number().optional().default(10).describe("Max results (default: 10)"),
       },
-      async ({ query, language, org, maxResults = 10 }) => {
+      async ({ query, language, org, maxResults }) => {
         let q = query;
         if (language) q += ` language:${language}`;
         if (org) q += ` org:${org}`;
 
-        const url = `https://api.github.com/search/code?q=${encodeURIComponent(q)}&per_page=${maxResults}`;
+        const url = `https://api.github.com/search/code?q=${encodeURIComponent(q)}&per_page=${maxResults || 10}`;
         const res = await fetch(url, {
           headers: {
             Authorization: `token ${process.env.GITHUB_TOKEN}`,
@@ -83,12 +84,16 @@ spec:
           command: ["sh", "-c"]
           args:
             - |
-              npm install @modelcontextprotocol/sdk && node /app/server.js
-          workingDir: /app
+              cd /tmp && npm install @modelcontextprotocol/sdk zod && NODE_PATH=/tmp/node_modules node /app/server.js
+          workingDir: /tmp
           ports:
             - containerPort: 3003
               protocol: TCP
           env:
+            - name: HOME
+              value: /tmp
+            - name: NPM_CONFIG_CACHE
+              value: /tmp/.npm
             - name: GITHUB_TOKEN
               valueFrom:
                 secretKeyRef:
@@ -101,14 +106,12 @@ spec:
               mountPath: /app/server.js
               subPath: server.js
           livenessProbe:
-            httpGet:
-              path: /sse
+            tcpSocket:
               port: 3003
             initialDelaySeconds: 30
             periodSeconds: 30
           readinessProbe:
-            httpGet:
-              path: /sse
+            tcpSocket:
               port: 3003
             initialDelaySeconds: 15
             periodSeconds: 10
