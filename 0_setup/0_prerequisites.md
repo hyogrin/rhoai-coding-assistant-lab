@@ -27,7 +27,7 @@
 
 | Service | Required For | How to Get |
 |---------|-------------|------------|
-| GitHub PAT | GitHub MCP + gh-grep servers | [github.com/settings/tokens](https://github.com/settings/tokens) |
+| GitHub PAT | `gh` CLI authentication (optional) | [github.com/settings/tokens](https://github.com/settings/tokens) |
 | Hugging Face Token | Download gated models for RHOAI | [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens) |
 
 > **Note:** No external LLM API keys (Anthropic, OpenAI) needed. Models are served locally on RHOAI.
@@ -68,7 +68,6 @@ At least one of:
 
 Developer workstations need HTTPS access to:
 - OpenShift cluster API and Routes (for IDE → MCP and IDE → MaaS)
-- `api.github.com` (proxied via GitHub MCP server on cluster)
 - `mcp.context7.com` (proxied via Context7 pod on cluster)
 
 The MCP servers and MaaS on OpenShift handle external API calls — developers only need access to the cluster Routes.

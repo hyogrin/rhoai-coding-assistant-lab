@@ -61,10 +61,9 @@ flowchart TB
     end
 
     subgraph "MCP Servers (namespace: mcp-servers)"
-        MCP1[Sequential Thinking]
-        MCP2[GitHub MCP]
-        MCP3[gh-grep]
-        MCP4[Chrome DevTools]
+        MCP1[Context7]
+        MCP2[Code Sandbox]
+        MCP3[Playwright]
     end
 
     IDE[Developer IDE] -->|HTTPS + API Key| Gateway
@@ -76,7 +75,6 @@ flowchart TB
     Gateway -->|MCP Proxy| MCP1
     Gateway --> MCP2
     Gateway --> MCP3
-    Gateway --> MCP4
 ```
 
 **Key insight:** MaaS serves as the single entry point. Developers configure one gateway URL and one API key — the platform handles routing to models (OpenAI API) and MCP servers (Streamable HTTP) with consistent auth and rate limiting.

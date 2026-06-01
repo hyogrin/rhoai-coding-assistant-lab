@@ -25,7 +25,7 @@ flowchart TB
             SeqThink[Sequential Thinking]
             CodeSandbox[Code Sandbox]
             Context7[Context7 - Library Docs]
-            GitHub[GitHub MCP - Repo Ops]
+            CodeSandbox[Code Sandbox - Execution]
             Playwright[Playwright - Browser]
         end
 
@@ -79,7 +79,7 @@ flowchart LR
 ### 1. MCP Servers (Phase 1)
 
 * **1_mcp_servers/1_mcp_overview.md**: Introduction to MCP protocol, server types, and deployment strategies on OpenShift.
-* **1_mcp_servers/2_deploy_mcp_servers.ipynb**: Deploy 6 MCP servers to OpenShift (Sequential Thinking, Code Sandbox, Context7, GitHub, gh-grep, Playwright).
+* **1_mcp_servers/2_deploy_mcp_servers.ipynb**: Deploy 3 MCP servers to OpenShift (Context7, Code Sandbox, Playwright). GitHub/Sequential Thinking are replaced by AI Skills + `gh` CLI.
 * **1_mcp_servers/3_connect_ide_clients.ipynb**: Configure IDEs to connect to MCP servers via OpenShift Routes.
 
 ### 2. Models as a Service — Unified Gateway (Phase 2)
