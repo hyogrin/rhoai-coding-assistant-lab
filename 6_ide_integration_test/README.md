@@ -12,11 +12,11 @@ Verify the end-to-end coding assistant experience by connecting real IDEs to the
 
 ```
 6_ide_integration_test/
-├── README.md                      # This document
-├── 1_cursor_agent_mode.md         # Cursor IDE — Agent mode walkthrough
-├── 2_vscode_continue.md           # VS Code + Continue extension
-├── 3_claude_code_cli.md           # Claude Code CLI
-└── screenshots/                   # Screenshot evidence
+├── README.md                        # This document
+├── 1_cursor_agent_mode.ipynb        # Cursor IDE — Agent mode walkthrough
+├── 2_vscode_continue.ipynb          # VS Code + Continue extension
+├── 3_claude_code_cli.ipynb          # Claude Code CLI
+└── screenshots/                     # Screenshot evidence
     └── .gitkeep
 ```
 

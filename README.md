@@ -111,9 +111,9 @@ flowchart LR
 
 ### 6. IDE Integration Test (Phase 6)
 
-* **6_ide_integration_test/1_cursor_agent_mode.md**: Cursor IDE Agent mode — model connection, MCP tool calling, multi-step workflows with screenshots.
-* **6_ide_integration_test/2_vscode_continue.md**: VS Code + Continue extension — chat, inline edit, and tool integration.
-* **6_ide_integration_test/3_claude_code_cli.md**: Claude Code CLI — terminal-based agent mode with MCP servers.
+* **6_ide_integration_test/1_cursor_agent_mode.ipynb**: Cursor IDE Agent mode — discover endpoints, verify connectivity, configure, and test multi-step agent workflows.
+* **6_ide_integration_test/2_vscode_continue.ipynb**: VS Code + Continue extension — auto-generate config, test chat, inline edit, and MCP tool calling.
+* **6_ide_integration_test/3_claude_code_cli.ipynb**: Claude Code CLI — environment setup, MCP configuration, and terminal-based agent testing.
 
 ## Prerequisites
 
