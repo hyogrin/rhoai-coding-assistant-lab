@@ -24,7 +24,9 @@ spec:
             - |
               npx -y supergateway \
                 --stdio 'npx -y @modelcontextprotocol/server-github' \
+                --outputTransport streamableHttp \
                 --port 3002 \
+                --healthEndpoint /health \
                 --name github
           ports:
             - containerPort: 3002
@@ -39,15 +41,22 @@ spec:
                 secretKeyRef:
                   name: mcp-api-keys
                   key: GITHUB_TOKEN
-          livenessProbe:
-            tcpSocket:
+          startupProbe:
+            httpGet:
+              path: /health
               port: 3002
-            initialDelaySeconds: 30
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 24
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3002
             periodSeconds: 30
           readinessProbe:
-            tcpSocket:
+            httpGet:
+              path: /health
               port: 3002
-            initialDelaySeconds: 15
             periodSeconds: 10
           resources:
             requests:
@@ -55,7 +64,7 @@ spec:
               memory: 256Mi
             limits:
               cpu: 500m
-              memory: 512Mi
+              memory: 768Mi
 ---
 apiVersion: v1
 kind: Service

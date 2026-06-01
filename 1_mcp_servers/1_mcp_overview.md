@@ -18,7 +18,7 @@ sequenceDiagram
     Pod->>API: External API call (GitHub, Google, etc.)
     API-->>Pod: Response
     Pod-->>Route: MCP response
-    Route-->>IDE: HTTPS response (SSE stream)
+    Route-->>IDE: HTTPS response (Streamable HTTP)
 ```
 
 ## Transport Types
@@ -26,10 +26,10 @@ sequenceDiagram
 | Transport | Protocol | Deployment |
 |-----------|----------|------------|
 | **stdio** | stdin/stdout | Local only (not for team use) |
-| **HTTP SSE** | HTTP + Server-Sent Events | OpenShift Service + Route |
-| **Streamable HTTP** | HTTP POST/GET | OpenShift Service + Route |
+| **Streamable HTTP** | HTTP POST (bidirectional) | OpenShift Service + Route |
+| ~~HTTP SSE~~ | ~~HTTP + Server-Sent Events~~ | ~~Deprecated — single-connection only~~ |
 
-For team deployments on OpenShift, we use **HTTP SSE** transport exposed via Routes, so all developers share a single server instance.
+For team deployments on OpenShift, we use **Streamable HTTP** transport (the 2026 MCP standard) exposed via Routes, so all developers share a single server instance. Streamable HTTP supports multiple concurrent connections natively, avoiding the crash-loop issues of the older SSE transport.
 
 ## MCP Servers in This Lab
 
@@ -64,10 +64,10 @@ flowchart TB
         R4[Route: mcp-chrome-devtools]
     end
 
-    IDE[Developer IDE] -->|HTTPS /sse| R1
-    IDE -->|HTTPS /sse| R2
-    IDE -->|HTTPS /sse| R3
-    IDE -->|HTTPS /sse| R4
+    IDE[Developer IDE] -->|HTTPS POST /mcp| R1
+    IDE -->|HTTPS POST /mcp| R2
+    IDE -->|HTTPS POST /mcp| R3
+    IDE -->|HTTPS POST /mcp| R4
 ```
 
 Each MCP server is deployed as:
@@ -76,7 +76,7 @@ Each MCP server is deployed as:
 - **Route** — External HTTPS endpoint (with TLS termination)
 - **Secret** — API tokens (GitHub PAT)
 
-**Key insight:** stdio-based MCP servers (GitHub, Sequential Thinking) are wrapped with `supergateway` inside the container to expose them as HTTP SSE endpoints.
+**Key insight:** stdio-based MCP servers (GitHub, Sequential Thinking) are wrapped with `supergateway --outputTransport streamableHttp` inside the container to expose them as Streamable HTTP endpoints (`POST /mcp`).
 
 ## Next Steps
 

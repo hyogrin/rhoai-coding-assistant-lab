@@ -5,15 +5,16 @@ metadata:
   namespace: mcp-servers
 data:
   server.py: |
-    """MCP Code Sandbox Server — secure code execution for AI agents via SSE."""
+    """MCP Code Sandbox Server — secure code execution via Streamable HTTP."""
     import asyncio, os, time
     from pathlib import Path
     from mcp.server import Server
-    from mcp.server.sse import SseServerTransport
+    from mcp.server.streamable_http import StreamableHTTPServerTransport
     from mcp.types import Tool, TextContent
     from starlette.applications import Starlette
-    from starlette.routing import Route, Mount
-    from starlette.responses import JSONResponse
+    from starlette.routing import Route
+    from starlette.requests import Request
+    from starlette.responses import JSONResponse, Response
     import uvicorn
 
     WORKSPACE = Path(os.environ.get("SANDBOX_WORKSPACE", "/tmp/sandbox-workspace"))
@@ -23,7 +24,6 @@ data:
     (WORKSPACE / ".tmp").mkdir(exist_ok=True)
 
     app = Server("code-sandbox")
-    sse = SseServerTransport("/messages/")
 
     @app.list_tools()
     async def list_tools():
@@ -98,23 +98,33 @@ data:
             entries.append(f"{p}{item.name}")
         return [TextContent(type="text", text="\n".join(entries) or "(empty)")]
 
-    async def handle_sse(request):
-        async with sse.connect_sse(request.scope, request.receive, request._send) as streams:
-            await app.run(streams[0], streams[1], app.create_initialization_options())
+    transport = StreamableHTTPServerTransport(mcp_session_id=None)
 
     async def health(request):
         return JSONResponse({"status": "ok", "server": "code-sandbox"})
 
-    starlette_app = Starlette(
-        routes=[
-            Route("/health", health),
-            Route("/sse", endpoint=handle_sse),
-            Mount("/messages/", app=sse.handle_post_message),
-        ]
-    )
+    health_app = Starlette(routes=[Route("/health", health)])
+
+    async def asgi_app(scope, receive, send):
+        if scope["type"] == "lifespan":
+            await health_app(scope, receive, send)
+            return
+        path = scope.get("path", "")
+        if path == "/mcp":
+            await transport.handle_request(scope, receive, send)
+        else:
+            await health_app(scope, receive, send)
+
+    async def main():
+        async with transport.connect() as (read_stream, write_stream):
+            task = asyncio.create_task(app.run(read_stream, write_stream, app.create_initialization_options()))
+            config = uvicorn.Config(asgi_app, host="0.0.0.0", port=PORT, log_level="info")
+            server = uvicorn.Server(config)
+            await server.serve()
+            task.cancel()
 
     if __name__ == "__main__":
-        uvicorn.run(starlette_app, host="0.0.0.0", port=PORT)
+        asyncio.run(main())
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -140,7 +150,7 @@ spec:
           command: ["sh", "-c"]
           args:
             - |
-              pip install -q "mcp[cli]>=1.0.0" uvicorn starlette sse-starlette &&
+              pip install -q "mcp[cli]>=1.0.0" uvicorn starlette &&
               python3 /app/server.py
           ports:
             - containerPort: 3005
@@ -158,6 +168,23 @@ spec:
             - name: source
               mountPath: /app/server.py
               subPath: server.py
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 3005
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 24
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3005
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3005
+            periodSeconds: 10
           securityContext:
             runAsNonRoot: true
             allowPrivilegeEscalation: false

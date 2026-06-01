@@ -79,7 +79,7 @@ flowchart TB
     Gateway --> MCP4
 ```
 
-**Key insight:** MaaS serves as the single entry point. Developers configure one gateway URL and one API key — the platform handles routing to models (OpenAI API) and MCP servers (SSE/StreamableHTTP) with consistent auth and rate limiting.
+**Key insight:** MaaS serves as the single entry point. Developers configure one gateway URL and one API key — the platform handles routing to models (OpenAI API) and MCP servers (Streamable HTTP) with consistent auth and rate limiting.
 
 ## How It Works
 
@@ -106,9 +106,11 @@ curl -sk "${MAAS_ENDPOINT}/v1/chat/completions" \
   -H "Content-Type: application/json" \
   -d '{"model": "MODEL_NAME", "messages": [{"role": "user", "content": "Hello"}], "max_tokens": 50}'
 
-# MCP server access (proxied through gateway)
-curl -sk "${MAAS_ENDPOINT}/mcp/<server-name>/sse" \
-  -H "Authorization: Bearer ${API_KEY}"
+# MCP server access (Streamable HTTP — proxied through gateway)
+curl -sk -X POST "${MAAS_ENDPOINT}/mcp/<server-name>/mcp" \
+  -H "Authorization: Bearer ${API_KEY}" \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"cli","version":"1.0"}}}'
 ```
 
 ## Important Notes
@@ -126,7 +128,7 @@ curl -sk "${MAAS_ENDPOINT}/mcp/<server-name>/sse" \
 | `https://maas.apps.<domain>/maas-api/v1/models` | MaaS API — list available models |
 | `https://maas.apps.<domain>/maas-api/v1/api-keys` | MaaS API — create API keys |
 | `<model-url>/v1/chat/completions` | Model inference via MaaS |
-| `https://maas.apps.<domain>/mcp/<server-name>/sse` | MCP server access via MaaS |
+| `https://maas-api.<domain>/mcp/<server-name>/mcp` | MCP server access via MaaS (Streamable HTTP POST) |
 
 ## Next Steps
 

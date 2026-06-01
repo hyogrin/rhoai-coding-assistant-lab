@@ -24,7 +24,9 @@ spec:
             - |
               npx -y supergateway \
                 --stdio 'npx -y @playwright/mcp@latest --headless' \
+                --outputTransport streamableHttp \
                 --port 3004 \
+                --healthEndpoint /health \
                 --name playwright
           ports:
             - containerPort: 3004
@@ -36,6 +38,23 @@ spec:
               value: /tmp/.npm
             - name: PLAYWRIGHT_CHROMIUM_SANDBOX
               value: "false"
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 3004
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 24
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3004
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3004
+            periodSeconds: 10
           securityContext:
             runAsNonRoot: true
             allowPrivilegeEscalation: false

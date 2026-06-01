@@ -6,58 +6,60 @@ metadata:
 data:
   server.js: |
     const { McpServer } = require("@modelcontextprotocol/sdk/server/mcp.js");
-    const { SSEServerTransport } = require("@modelcontextprotocol/sdk/server/sse.js");
+    const { StreamableHTTPServerTransport } = require("@modelcontextprotocol/sdk/server/streamableHttp.js");
     const { z } = require("zod");
-    const http = require("http");
-
-    const server = new McpServer({ name: "gh-grep", version: "1.0.0" });
-
-    server.tool(
-      "search_code",
-      "Search code across GitHub repositories",
-      {
-        query: z.string().describe("Search query (GitHub code search syntax)"),
-        language: z.string().optional().describe("Filter by programming language"),
-        org: z.string().optional().describe("Filter by organization"),
-        maxResults: z.number().optional().default(10).describe("Max results (default: 10)"),
-      },
-      async ({ query, language, org, maxResults }) => {
-        let q = query;
-        if (language) q += ` language:${language}`;
-        if (org) q += ` org:${org}`;
-
-        const url = `https://api.github.com/search/code?q=${encodeURIComponent(q)}&per_page=${maxResults || 10}`;
-        const res = await fetch(url, {
-          headers: {
-            Authorization: `token ${process.env.GITHUB_TOKEN}`,
-            Accept: "application/vnd.github.v3+json",
-          },
-        });
-
-        if (!res.ok) {
-          return { content: [{ type: "text", text: `GitHub API error: ${res.status}` }] };
-        }
-
-        const data = await res.json();
-        const results = data.items.map((item) => ({
-          repo: item.repository.full_name,
-          path: item.path,
-          url: item.html_url,
-        }));
-
-        return {
-          content: [{ type: "text", text: JSON.stringify(results, null, 2) }],
-        };
-      }
-    );
 
     const PORT = process.env.GH_GREP_PORT || 3003;
-    const httpServer = http.createServer();
-    const transport = new SSEServerTransport("/sse", httpServer);
+    const http = require("http");
+
+    function createServer() {
+      const s = new McpServer({ name: "gh-grep", version: "1.0.0" });
+      s.tool(
+        "search_code",
+        "Search code across GitHub repositories",
+        {
+          query: z.string().describe("Search query (GitHub code search syntax)"),
+          language: z.string().optional().describe("Filter by programming language"),
+          org: z.string().optional().describe("Filter by organization"),
+          maxResults: z.number().optional().default(10).describe("Max results (default: 10)"),
+        },
+        async ({ query, language, org, maxResults }) => {
+          let q = query;
+          if (language) q += ` language:${language}`;
+          if (org) q += ` org:${org}`;
+          const url = `https://api.github.com/search/code?q=${encodeURIComponent(q)}&per_page=${maxResults || 10}`;
+          const res = await fetch(url, {
+            headers: {
+              Authorization: `token ${process.env.GITHUB_TOKEN}`,
+              Accept: "application/vnd.github.v3+json",
+            },
+          });
+          if (!res.ok) return { content: [{ type: "text", text: `GitHub API error: ${res.status}` }] };
+          const data = await res.json();
+          const results = data.items.map((item) => ({
+            repo: item.repository.full_name, path: item.path, url: item.html_url,
+          }));
+          return { content: [{ type: "text", text: JSON.stringify(results, null, 2) }] };
+        }
+      );
+      return s;
+    }
+
+    const httpServer = http.createServer(async (req, res) => {
+      if (req.url === "/health") {
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ status: "ok" }));
+        return;
+      }
+      const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
+      const mcpServer = createServer();
+      await mcpServer.connect(transport);
+      await transport.handleRequest(req, res);
+      await mcpServer.close();
+    });
 
     httpServer.listen(PORT, () => {
-      console.log(`gh-grep MCP server running on http://localhost:${PORT}/sse`);
-      server.connect(transport);
+      console.log(`gh-grep MCP server running on http://localhost:${PORT}/mcp`);
     });
 ---
 apiVersion: apps/v1
@@ -105,15 +107,22 @@ spec:
             - name: server-script
               mountPath: /app/server.js
               subPath: server.js
-          livenessProbe:
-            tcpSocket:
+          startupProbe:
+            httpGet:
+              path: /health
               port: 3003
-            initialDelaySeconds: 30
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 24
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3003
             periodSeconds: 30
           readinessProbe:
-            tcpSocket:
+            httpGet:
+              path: /health
               port: 3003
-            initialDelaySeconds: 15
             periodSeconds: 10
           resources:
             requests:
@@ -121,7 +130,7 @@ spec:
               memory: 256Mi
             limits:
               cpu: 500m
-              memory: 512Mi
+              memory: 768Mi
       volumes:
         - name: server-script
           configMap:

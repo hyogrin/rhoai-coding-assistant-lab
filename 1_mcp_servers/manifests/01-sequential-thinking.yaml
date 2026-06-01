@@ -24,7 +24,9 @@ spec:
             - |
               npx -y supergateway \
                 --stdio 'npx -y @modelcontextprotocol/server-sequential-thinking' \
+                --outputTransport streamableHttp \
                 --port 3001 \
+                --healthEndpoint /health \
                 --name sequential-thinking
           env:
             - name: HOME
@@ -34,15 +36,22 @@ spec:
           ports:
             - containerPort: 3001
               protocol: TCP
-          livenessProbe:
-            tcpSocket:
+          startupProbe:
+            httpGet:
+              path: /health
               port: 3001
-            initialDelaySeconds: 30
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 24
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3001
             periodSeconds: 30
           readinessProbe:
-            tcpSocket:
+            httpGet:
+              path: /health
               port: 3001
-            initialDelaySeconds: 15
             periodSeconds: 10
           resources:
             requests:
@@ -50,7 +59,7 @@ spec:
               memory: 256Mi
             limits:
               cpu: 500m
-              memory: 512Mi
+              memory: 768Mi
 ---
 apiVersion: v1
 kind: Service
