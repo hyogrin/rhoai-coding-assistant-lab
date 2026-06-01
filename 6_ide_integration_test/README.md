@@ -26,5 +26,5 @@ Verify the end-to-end coding assistant experience by connecting real IDEs to the
 |------|-------------|
 | Phases 0–3 completed | Model deployed, MCP servers running, MaaS gateway configured |
 | API Key | Issued from MaaS gateway |
-| MaaS Endpoint | `https://maas-api.apps.<cluster-domain>` |
+| MaaS Endpoint | `https://maas-api.<CLUSTER_DOMAIN>` (from `.env`) |
 | IDE installed | Cursor, VS Code, or Claude Code (at least one) |
