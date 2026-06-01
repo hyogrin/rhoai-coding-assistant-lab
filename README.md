@@ -22,8 +22,6 @@ flowchart TB
         end
 
         subgraph MCP["MCP Servers (namespace: mcp-servers)"]
-            SeqThink[Sequential Thinking]
-            CodeSandbox[Code Sandbox]
             Context7[Context7 - Library Docs]
             CodeSandbox[Code Sandbox - Execution]
             Playwright[Playwright - Browser]
@@ -67,7 +65,32 @@ flowchart LR
 |-------|----------|-----|------------|
 | Qwen2.5-Coder-7B-Instruct | Coding, autocomplete, tool calling | 1x L4/L10 (24GB) | InferenceService via OCI ModelCar |
 
-> **Note:** Model choices are configurable. Any model deployable on vLLM works. Models from [RedHatAI on Hugging Face](https://huggingface.co/RedHatAI) are pre-quantized for optimal vLLM performance. For multi-replica production workloads, consider upgrading to `LLMInferenceService` with llm-d intelligent routing.
+> **Note:** Model choices are configurable. Any model deployable on vLLM works. Models from [RedHatAI on Hugging Face](https://huggingface.co/RedHatAI) are pre-quantized for optimal vLLM performance.
+
+### Upgrade Options (Larger Models)
+
+For teams with A100/H100 GPUs, pre-built vLLM container images with optimized serving configs are available:
+
+| Model | Architecture | Weights | GPU | Concurrent 128K Seqs |
+|-------|-------------|---------|-----|---------------------|
+| [Qwen3.6-27B-FP8](https://github.com/eggboy/vllm-container-image/tree/main/qwen36-27b) | Dense (27B active) | FP8 (~28GB) | A100 80GB | 12 |
+| [Qwen3.6-35B-A3B](https://github.com/eggboy/vllm-container-image/tree/main/qwen36-35b-a3b) | MoE (35B total, 3B active) | GPTQ-Int4 (~18GB) | A100 80GB / L40S | 8 |
+
+**Key differences:**
+- **27B Dense** — Maximum quality, all 27B parameters active per token. Best for complex code generation.
+- **35B-A3B MoE** — 35B knowledge with only 3B compute cost per token. Faster responses, ideal for team-shared coding assistants.
+
+Both include: chunked-prefill, GDN hybrid attention optimization, native tool calling (`--tool-call-parser qwen3_coder`), and reasoning mode (`--reasoning-parser qwen3`).
+
+```bash
+# Build and push to your registry (example: Quay.io)
+git clone https://github.com/eggboy/vllm-container-image.git
+cd vllm-container-image/qwen36-35b-a3b
+podman build -t quay.io/<namespace>/vllm-qwen36-35b-a3b:latest -f Dockerfile.vllm.a100 .
+podman push quay.io/<namespace>/vllm-qwen36-35b-a3b:latest
+```
+
+> **Tip:** On OpenShift, use a `BuildConfig` to avoid downloading ~18-28GB model weights locally.
 
 ## What's Included
 
@@ -175,6 +198,7 @@ Key skills included:
 ## Related Projects
 
 * [Private AI Coding Assistant](https://github.com/manujoy7/Private_AI_Coding_Assistant) — Production reference architecture for private AI code assistants on ROSA HCP and ARO, with multi-accelerator benchmarks and GitOps deployment.
+* [vLLM Container Images](https://github.com/eggboy/vllm-container-image) — Pre-built vLLM Dockerfiles with optimized serving configs for Qwen3.6 models on A100/H100 GPUs (FP8, GPTQ-Int4, chunked-prefill, GDN hybrid attention).
 
 ## About
 
