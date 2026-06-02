@@ -21,21 +21,22 @@ flowchart TB
             RateLimit[Limitador - Rate Limiting]
         end
 
-        subgraph MCP["MCP Servers (namespace: mcp-servers)"]
+        subgraph MCP["MCP Servers (Streamable HTTP)"]
             Context7[Context7 - Library Docs]
             CodeSandbox[Code Sandbox - Execution]
             Playwright[Playwright - Browser]
+            DuckDuckGo[DuckDuckGo - Web Search]
         end
 
         subgraph Inference["Model Serving (vLLM on RHOAI)"]
-            vLLM1[vLLM - Qwen2.5-Coder-7B]
+            vLLM1[vLLM - Qwen3.6-35B-A3B]
         end
     end
 
     IDE -->|Single API Key / HTTPS| Gateway
     Gateway --> Auth
     Auth --> RateLimit
-    RateLimit -->|Model Inference| vLLM1
+    RateLimit -->|OpenAI API| vLLM1
     Gateway -->|MCP Proxy| MCP
 ```
 
@@ -44,28 +45,28 @@ flowchart TB
 | Phase | Focus | Key Outcome |
 |-------|-------|-------------|
 | **0 — Setup** | Prerequisites & environment | Models deployed on RHOAI |
-| **1 — MCP Servers** | Deploy shared tool servers | MCP tools accessible via Routes |
+| **1 — MCP Servers** | Deploy shared tool servers | MCP tools accessible via Streamable HTTP |
 | **2 — MaaS Gateway** | Unified gateway with auth | Single API key for models + MCP tools |
 | **3 — Run & Control** | IDE integration & operations | End-to-end coding assistant |
 | **4 — Developer Experience** | Dev Spaces & extensions | Team-scale onboarding with pre-configured IDEs |
 | **5 — Benchmarks** | Performance validation | Capacity planning with real metrics |
 | **6 — IDE Integration Test** | Agent mode verification | Screenshots of working coding assistant |
 
-> Together: models provide the **"brain"** (inference), MCP tools provide the **"hands"** (actions), and MaaS provides **"governance"** (auth, rate limiting, API keys) — all accessed via a single API key.
+> Together: models provide the **"brain"** (inference), MCP tools provide the **"hands"** (actions), MaaS provides **"governance"** (auth, rate limiting, API keys), and AI Skills provide **"knowledge"** (domain-specific instructions) — all accessed via a single API key.
 
 ## Model Serving Strategy
 
 ```mermaid
 flowchart LR
     IDE[Developer IDE] -->|API Key| GW[MaaS Gateway]
-    GW -->|Auth + Rate Limit| Model[vLLM - Qwen2.5-Coder-7B]
+    GW -->|Auth + Rate Limit| Model[vLLM - Qwen3.6-35B-A3B]
 ```
 
 | Model | Use Case | GPU | Deployment |
 |-------|----------|-----|------------|
-| Qwen2.5-Coder-7B-Instruct | Coding, autocomplete, tool calling | 1x L4/L10 (24GB) | InferenceService via OCI ModelCar |
+| Qwen3.6-35B-A3B (GPTQ-Int4) | Coding, reasoning, tool calling | 1x L40S (46GB) | InferenceService via OCI ModelCar |
 
-> **Note:** Model choices are configurable. Any model deployable on vLLM works. Models from [RedHatAI on Hugging Face](https://huggingface.co/RedHatAI) are pre-quantized for optimal vLLM performance.
+> **Note:** Model choices are configurable. Any model deployable on vLLM works. The default model uses MoE architecture (35B total, 3B active per token) for fast responses with large context (65K tokens). Models from [RedHatAI on Hugging Face](https://huggingface.co/RedHatAI) are also available as pre-quantized alternatives.
 
 ### Upgrade Options (Larger Models)
 
@@ -102,7 +103,7 @@ podman push quay.io/<namespace>/vllm-qwen36-35b-a3b:latest
 ### 1. MCP Servers (Phase 1)
 
 * **1_mcp_servers/1_mcp_overview.md**: Introduction to MCP protocol, server types, and deployment strategies on OpenShift.
-* **1_mcp_servers/2_deploy_mcp_servers.ipynb**: Deploy 3 MCP servers to OpenShift (Context7, Code Sandbox, Playwright). GitHub/Sequential Thinking are replaced by AI Skills + `gh` CLI.
+* **1_mcp_servers/2_deploy_mcp_servers.ipynb**: Deploy 4 MCP servers to OpenShift (Context7, Playwright, Code Sandbox, DuckDuckGo) using Streamable HTTP transport.
 * **1_mcp_servers/3_connect_ide_clients.ipynb**: Configure IDEs to connect to MCP servers via OpenShift Routes.
 
 ### 2. Models as a Service — Unified Gateway (Phase 2)
@@ -198,7 +199,6 @@ Key skills included:
 ## Related Projects
 
 * [Private AI Coding Assistant](https://github.com/manujoy7/Private_AI_Coding_Assistant) — Production reference architecture for private AI code assistants on ROSA HCP and ARO, with multi-accelerator benchmarks and GitOps deployment.
-* [vLLM Container Images](https://github.com/eggboy/vllm-container-image) — Pre-built vLLM Dockerfiles with optimized serving configs for Qwen3.6 models on A100/H100 GPUs (FP8, GPTQ-Int4, chunked-prefill, GDN hybrid attention).
 
 ## About
 

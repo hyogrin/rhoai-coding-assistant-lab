@@ -1,0 +1,103 @@
+---
+# Custom ServingRuntime: RHOAI vLLM with Qwen3.6 GDN/L40S optimizations
+apiVersion: serving.kserve.io/v1alpha1
+kind: ServingRuntime
+metadata:
+  name: vllm-qwen36-runtime
+  namespace: rhoai-models
+  labels:
+    opendatahub.io/dashboard: "true"
+  annotations:
+    openshift.io/display-name: "vLLM Qwen3.6 Runtime (GDN + L40S)"
+spec:
+  annotations:
+    openshift.io/display-name: "vLLM Qwen3.6 Runtime (GDN + L40S)"
+  containers:
+    - name: kserve-container
+      image: docker.io/vllm/vllm-openai:cu129-nightly
+      command:
+        - /bin/bash
+        - -c
+        - |
+          vllm serve /mnt/models \
+            --port=8080 \
+            --served-model-name=$(INFERENCE_SERVICE_NAME) \
+            --trust-remote-code \
+            --quantization=gptq_marlin \
+            --dtype=float16 \
+            --gpu-memory-utilization=0.92 \
+            --max-model-len=65536 \
+            --max-num-seqs=4 \
+            --max-num-batched-tokens=4192 \
+            --enable-chunked-prefill \
+            --mamba-cache-mode=align \
+            --kv-cache-dtype=fp8 \
+            --enable-prefix-caching \
+            --reasoning-parser=qwen3 \
+            --enable-auto-tool-choice \
+            --tool-call-parser=qwen3_coder
+      env:
+        - name: HF_TOKEN
+          valueFrom:
+            secretKeyRef:
+              key: token
+              name: hf-token
+        - name: HOME
+          value: /tmp
+        - name: USER
+          value: vllm
+        - name: LOGNAME
+          value: vllm
+        - name: TORCHINDUCTOR_CACHE_DIR
+          value: /tmp/torch_cache
+        - name: TRITON_CACHE_DIR
+          value: /tmp/triton_cache
+        - name: XDG_CACHE_HOME
+          value: /tmp/.cache
+      ports:
+        - containerPort: 8080
+          protocol: TCP
+      resources:
+        limits:
+          cpu: "8"
+          memory: 48Gi
+        requests:
+          cpu: "4"
+          memory: 24Gi
+  multiModel: false
+  supportedModelFormats:
+    - autoSelect: true
+      name: vLLM
+---
+# InferenceService: Qwen3.6-35B-A3B via OCI ModelCar
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  name: qwen36-35b-a3b
+  namespace: rhoai-models
+  labels:
+    opendatahub.io/dashboard: "true"
+    app.kubernetes.io/part-of: code-assistant-lab
+  annotations:
+    serving.kserve.io/deploymentMode: RawDeployment
+    openshift.io/display-name: "Qwen3.6-35B-A3B (GPTQ-Int4) - MoE Code Assistant"
+spec:
+  predictor:
+    tolerations:
+      - key: nvidia.com/gpu
+        operator: Exists
+        effect: NoSchedule
+    model:
+      modelFormat:
+        name: vLLM
+      runtime: vllm-qwen36-runtime
+      storageUri: oci://quay.io/rh-ee-hyochoi/qwen36-35b-a3b-modelcar:latest
+      resources:
+        requests:
+          cpu: "4"
+          memory: 24Gi
+          nvidia.com/gpu: "1"
+        limits:
+          cpu: "8"
+          memory: 48Gi
+          nvidia.com/gpu: "1"

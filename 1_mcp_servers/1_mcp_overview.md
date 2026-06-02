@@ -10,7 +10,7 @@ Not every tool needs MCP. We follow a pragmatic approach:
 
 | Approach | Use When | Examples |
 |----------|----------|---------|
-| **MCP Server** | No CLI equivalent exists, or secure sandboxed execution needed | Context7, Code Sandbox, Playwright |
+| **MCP Server** | No CLI equivalent exists, or secure sandboxed execution needed | Context7, Code Sandbox, Playwright, DuckDuckGo |
 | **AI Skills** | CLI already exists, model knows the commands | `gh`, `oc`, `git`, `curl` |
 | **Direct CLI** | Simple one-off commands | `oc get pods`, `gh issue list` |
 
@@ -54,6 +54,7 @@ Streamable HTTP supports multiple concurrent connections natively, avoiding the 
 | **Context7** | Library documentation lookup | mcp.context7.com (HTTP) | supergateway → Streamable HTTP |
 | **Code Sandbox** | Secure Python/Bash/Node execution | None (local) | Custom Python server |
 | **Playwright** | Browser automation & testing | None (local Chromium) | supergateway → Streamable HTTP |
+| **DuckDuckGo** | Web search & content fetching | duckduckgo.com (HTTP) | supergateway → Streamable HTTP |
 
 ## Deployment Strategy on OpenShift
 
@@ -64,20 +65,24 @@ flowchart TB
             D1[Deployment: mcp-playwright]
             D2[Deployment: mcp-context7]
             D3[Deployment: mcp-code-sandbox]
+            D4[Deployment: mcp-duckduckgo]
 
             S1[Service :3004]
             S2[Service :3001]
             S3[Service :3005]
+            S4[Service :3006]
         end
 
         R1[Route: mcp-playwright]
         R2[Route: mcp-context7]
         R3[Route: mcp-code-sandbox]
+        R4[Route: mcp-duckduckgo]
     end
 
     IDE[Developer IDE] -->|HTTPS POST /mcp| R1
     IDE -->|HTTPS POST /mcp| R2
     IDE -->|HTTPS POST /mcp| R3
+    IDE -->|HTTPS POST /mcp| R4
 ```
 
 Each MCP server is deployed as:
@@ -85,7 +90,7 @@ Each MCP server is deployed as:
 - **Service** — Internal cluster networking
 - **Route** — External HTTPS endpoint (with TLS termination)
 
-**Key insight:** stdio-based MCP servers (Playwright) are wrapped with `supergateway --outputTransport streamableHttp` inside the container to expose them as Streamable HTTP endpoints (`POST /mcp`).
+**Key insight:** stdio-based MCP servers (Playwright, DuckDuckGo) are wrapped with `supergateway --outputTransport streamableHttp` inside the container to expose them as Streamable HTTP endpoints (`POST /mcp`).
 
 ## Next Steps
 

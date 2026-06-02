@@ -1,0 +1,51 @@
+apiVersion: v1
+kind: List
+items:
+  # --- BuildConfig: weights-only ModelCar image ---
+  - apiVersion: build.openshift.io/v1
+    kind: BuildConfig
+    metadata:
+      name: qwen36-35b-a3b-modelcar
+      namespace: demo
+      labels:
+        app.kubernetes.io/part-of: code-assistant-lab
+    spec:
+      output:
+        to:
+          kind: DockerImage
+          name: quay.io/rh-ee-hyochoi/qwen36-35b-a3b-modelcar:latest
+        pushSecret:
+          name: rh-ee-hyochoi-pull-secret
+      resources:
+        limits:
+          cpu: "4"
+          memory: 32Gi
+          ephemeral-storage: 100Gi
+        requests:
+          cpu: "2"
+          memory: 16Gi
+          ephemeral-storage: 80Gi
+      runPolicy: Serial
+      source:
+        type: Dockerfile
+        dockerfile: |
+          FROM python:3.12-slim AS downloader
+          ARG HF_TOKEN
+          ENV HF_HUB_DISABLE_XET=1
+          RUN pip install --no-cache-dir huggingface_hub[hf_xfer] && \
+              HF_TOKEN=${HF_TOKEN} hf download \
+                palmfuture/Qwen3.6-35B-A3B-GPTQ-Int4 \
+                --local-dir /models && \
+              rm -rf /models/.cache
+
+          FROM registry.access.redhat.com/ubi9/ubi-micro:latest
+          COPY --from=downloader /models /models
+          LABEL io.openshift.modelcar="true"
+          LABEL org.opencontainers.image.description="Qwen3.6-35B-A3B GPTQ-Int4 weights for OCI ModelCar"
+      strategy:
+        type: Docker
+        dockerStrategy: {}
+        # NOTE: HF_TOKEN is passed at build time via CLI:
+        #   oc start-build qwen36-35b-a3b-modelcar -n demo \
+        #     --build-arg="HF_TOKEN=$(oc get secret hf-token -n demo -o jsonpath='{.data.HF_TOKEN}' | base64 -d)"
+        # OpenShift Docker strategy does not reliably inject valueFrom.secretKeyRef into ARG.

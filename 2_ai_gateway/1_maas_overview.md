@@ -56,22 +56,21 @@ flowchart TB
     end
 
     subgraph "RHOAI Model Serving"
-        IS1[InferenceService: qwen-coder-14b]
-        IS2[InferenceService: qwen-coder-7b]
+        IS1[InferenceService: qwen36-35b-a3b]
     end
 
-    subgraph "MCP Servers (namespace: mcp-servers)"
-        MCP1[Context7]
-        MCP2[Code Sandbox]
-        MCP3[Playwright]
+    subgraph "MCP Servers (Streamable HTTP)"
+        MCP1[Context7 - Library Docs]
+        MCP2[Code Sandbox - Execution]
+        MCP3[Playwright - Browser]
+        MCP4[DuckDuckGo - Web Search]
     end
 
     IDE[Developer IDE] -->|HTTPS + API Key| Gateway
     Gateway --> Authorino
     Authorino -->|Validate Key| MaaSAPI
     Gateway --> Limitador
-    Limitador -->|Model Inference| IS1
-    Limitador --> IS2
+    Limitador -->|OpenAI API| IS1
     Gateway -->|MCP Proxy| MCP1
     Gateway --> MCP2
     Gateway --> MCP3
