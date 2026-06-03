@@ -55,8 +55,8 @@ flowchart TB
         MaaSAPI --> PG
     end
 
-    subgraph "RHOAI Model Serving"
-        IS1[InferenceService: qwen36-35b-a3b]
+    subgraph "RHOAI Model Serving (llm-d)"
+        IS1[LLMInferenceService: qwen3-14b]
     end
 
     subgraph "MCP Servers (Streamable HTTP)"
@@ -80,9 +80,22 @@ flowchart TB
 
 ## How It Works
 
-### 1. Deploy Models with MaaS Enabled
+### 1. Deploy Models with LLMInferenceService (llm-d)
 
-When deploying a model through the RHOAI Dashboard, check the **MaaS checkbox** to enable MaaS gateway access.
+Models must be deployed using **LLMInferenceService** (llm-d) to be automatically registered with the MaaS Gateway. Standard `InferenceService` deployments are not visible to MaaS.
+
+```yaml
+apiVersion: serving.kserve.io/v1alpha1
+kind: LLMInferenceService
+metadata:
+  name: qwen3-14b
+  namespace: rhoai-models
+spec:
+  model:
+    name: qwen3-14b
+    uri: oci://quay.io/redhat-ai-services/modelcar-catalog:qwen3-14b
+  replicas: 1
+```
 
 ### 2. Register MCP Servers with the Gateway
 
@@ -112,20 +125,20 @@ curl -sk -X POST "${MAAS_ENDPOINT}/mcp/<server-name>/mcp" \
 
 ## Important Notes
 
-> **Direct Access Caveat:** When MaaS is enabled, the direct HTTPRoute to the model remains valid:
-> - `https://maas.apps.<domain>/maas-api/v1/...` → Goes through MaaS Gateway (auth + rate limiting enforced)
-> - `https://maas.apps.<domain>/<namespace>/<model-id>/v1/...` → Goes to the model directly, bypassing MaaS
+> **Direct Access Caveat:** When MaaS is enabled, both Gateway and direct routes exist:
+> - `https://inference-gateway.apps.<domain>/<namespace>/<model>/v1/...` → MaaS Gateway (auth + rate limiting enforced)
+> - Direct pod-level access → Bypasses MaaS entirely
 >
-> **Always check both the "MaaS" and "Require authentication" checkboxes** to prevent unauthorized direct access.
+> Use `security.opendatahub.io/enable-auth: "true"` annotation to enforce auth on direct access.
 
 ## Endpoint URL Format
 
 | Path | Destination |
 |------|-------------|
-| `https://maas.apps.<domain>/maas-api/v1/models` | MaaS API — list available models |
-| `https://maas.apps.<domain>/maas-api/v1/api-keys` | MaaS API — create API keys |
-| `<model-url>/v1/chat/completions` | Model inference via MaaS |
-| `https://maas-api.<domain>/mcp/<server-name>/mcp` | MCP server access via MaaS (Streamable HTTP POST) |
+| `https://inference-gateway.apps.<domain>/<ns>/<model>/v1/models` | Model list via inference-gateway |
+| `https://inference-gateway.apps.<domain>/<ns>/<model>/v1/chat/completions` | Model inference via gateway |
+| `https://maas.apps.<domain>/maas-api/v1/api-keys` | MaaS API — manage API keys |
+| `https://maas-api.apps.<domain>/mcp/<server-name>/mcp` | MCP server access (Streamable HTTP POST) |
 
 ## Next Steps
 

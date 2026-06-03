@@ -26,6 +26,9 @@ metadata:
     opendatahub.io/dashboard: "true"
   annotations:
     openshift.io/display-name: "vLLM ServingRuntime (FP8)"
+    opendatahub.io/apiProtocol: REST
+    opendatahub.io/template-name: vllm-runtime
+    opendatahub.io/template-display-name: "vLLM ServingRuntime for KServe"
 spec:
   annotations:
     openshift.io/display-name: vLLM ServingRuntime

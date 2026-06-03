@@ -4,9 +4,10 @@
 
 | Component | Version | Purpose |
 |-----------|---------|---------|
-| Red Hat OpenShift | 4.14+ | Container platform |
-| OpenShift AI (RHOAI) | 2.x+ | Model serving with vLLM + MaaS |
+| Red Hat OpenShift | 4.14+ (4.19+ for llm-d) | Container platform |
+| OpenShift AI (RHOAI) | 3.4+ | Model serving with vLLM + MaaS |
 | MaaS (Models as a Service) | — | Managed model gateway with auth & rate limiting |
+| PostgreSQL | 14+ | API key lifecycle management for MaaS |
 | NVIDIA GPU Operator | — | GPU support for model inference |
 | `oc` CLI | 4.14+ | Cluster management |
 | Python | 3.11+ | Jupyter notebooks |
@@ -18,7 +19,7 @@
 | Create Namespace | Cluster | Create `mcp-servers` namespace |
 | Deploy workloads | Namespace | Deploy MCP servers |
 | Create Routes | Namespace | Expose services externally |
-| InferenceService | RHOAI namespace | Deploy models on OpenShift AI |
+| LLMInferenceService / InferenceService | RHOAI namespace | Deploy models on OpenShift AI |
 | Create Secrets | Namespace | Store API tokens |
 
 > **Note:** If you don't have cluster-admin, ask your administrator to create the namespaces and grant you `edit` role.
@@ -32,26 +33,68 @@
 
 > **Note:** No external LLM API keys (Anthropic, OpenAI) needed. Models are served locally on RHOAI.
 
+## MaaS (Models as a Service) Prerequisites
+
+MaaS requires a PostgreSQL database for API key lifecycle management. OpenShift AI does **not** provide PostgreSQL — you must provision and manage your own instance.
+
+### PostgreSQL Setup
+
+1. Deploy PostgreSQL 14+ reachable from the OpenShift cluster network
+2. Create the `maas-db-config` Secret in the RHOAI applications namespace:
+
+```bash
+oc create secret generic maas-db-config \
+  -n redhat-ods-applications \
+  --from-literal=DB_CONNECTION_URL='postgresql://USERNAME:PASSWORD@HOSTNAME:5432/DATABASE?sslmode=require'
+```
+
+3. Create the MaaS Gateway:
+
+```bash
+# Clone MaaS setup scripts
+git clone https://github.com/opendatahub-io/models-as-a-service.git
+cd models-as-a-service
+
+# For on-premise clusters
+INGRESS_MODE=clusterip ./scripts/setup-gateway.sh
+```
+
+4. Enable MaaS in DataScienceCluster:
+
+```yaml
+spec:
+  components:
+    kserve:
+      managementState: Managed
+      rawDeploymentServiceConfig: Headed
+      modelsAsService:
+        managementState: Managed
+```
+
+> **Reference:** [MaaS Setup Guide](https://github.com/opendatahub-io/models-as-a-service/blob/main/docs/content/install/maas-setup.md)
+
 ## RHOAI Model Requirements
 
-Models will be served via vLLM on OpenShift AI. FP8-quantized models from [RedHatAI](https://huggingface.co/RedHatAI) and [Qwen](https://huggingface.co/Qwen) are used for optimal performance.
+Models are served via **LLMInferenceService (llm-d)** on OpenShift AI with OCI modelcar images. This enables automatic MaaS Gateway registration, API key management, and rate limiting.
 
-### Lightweight Path (Phases 0–3)
+### Default (MaaS-compatible via llm-d)
 
-| Model | Parameters | Min GPU | VRAM |
-|-------|-----------|---------|------|
-| Qwen2.5-Coder-7B-Instruct-FP8-dynamic | 7B (FP8) | 1x L10 | ~7GB |
-| Qwen2.5-Coder-14B-Instruct-FP8-dynamic | 14B (FP8) | 1x L10 | ~14GB |
+| Model | Parameters | Min GPU | VRAM | Source | MaaS |
+|-------|-----------|---------|------|--------|:----:|
+| Qwen3-14B (FP8) | 14B | 1x A100/L40S | ~14GB | `oci://quay.io/redhat-ai-services/modelcar-catalog:qwen3-14b` | Yes |
+| Qwen2.5-Coder-7B (FP8) | 7B | 1x L10/A10G | ~7GB | `oci://quay.io/redhat-ai-services/modelcar-catalog:qwen2.5-7b-instruct` | Yes |
+| Qwen3-4B | 4B | 1x L4/A10G | ~4GB | `oci://quay.io/redhat-ai-services/modelcar-catalog:qwen3-4b` | Yes |
 
-> **Tip:** Both models fit on a single NVIDIA L10 (24GB). Start with the 7B model for fast iteration, use the 14B for agent mode and complex tasks.
+> **Tip:** Qwen3-14B is the recommended default — dense FP8 architecture with native reasoning and tool-calling, deployed via `LLMInferenceService` with OCI modelcar for fast startup (no runtime downloads).
 
-### Production Path (Phases 4+)
+### Advanced (Larger Models — limited MaaS support)
 
-| Model | Parameters | Min GPU | VRAM | Features |
-|-------|-----------|---------|------|----------|
-| Qwen3-Coder-30B-A3B-Instruct-FP8 | 30B MoE / 3B active (FP8) | 1x L40S | ~30GB | Tool calling, 32K context, prefix caching |
+| Model | Parameters | Min GPU | VRAM | MaaS |
+|-------|-----------|---------|------|:----:|
+| Qwen3-Coder-30B-A3B (MoE) | 30B/3B active | 1x L40S | ~24GB | Verify |
+| Qwen3.6-35B-A3B (MoE) | 35B/3B active | 1x L40S | ~21GB | No |
 
-> **Tip:** The 30B MoE model activates only 3B parameters per token, delivering 93 tok/s single-user with native tool calling support. Requires NVIDIA L40S (48GB) or A100 (80GB). Deploy via `01-rhoai-models-30b.yaml`.
+> **Note:** MaaS integration requires `LLMInferenceService` (llm-d). Standard `InferenceService` deployments are NOT visible to the MaaS gateway. Qwen3.6 MoE models require upstream vLLM and are not compatible with llm-d.
 
 ## IDE with MCP Support
 

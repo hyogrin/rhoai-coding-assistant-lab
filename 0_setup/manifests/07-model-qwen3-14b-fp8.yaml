@@ -1,0 +1,40 @@
+apiVersion: serving.kserve.io/v1alpha1
+kind: LLMInferenceService
+metadata:
+  name: qwen3-14b
+  namespace: rhoai-models
+  labels:
+    opendatahub.io/dashboard: "true"
+    opendatahub.io/genai-asset: "true"
+    kueue.x-k8s.io/queue-name: default
+    app.kubernetes.io/part-of: code-assistant-lab
+  annotations:
+    security.opendatahub.io/enable-auth: "false"
+spec:
+  model:
+    name: qwen3-14b
+    uri: oci://quay.io/redhat-ai-services/modelcar-catalog:qwen3-14b
+  replicas: 1
+  router:
+    gateway: {}
+    route: {}
+    scheduler: {}
+  template:
+    containers:
+      - name: main
+        env:
+          - name: VLLM_ADDITIONAL_ARGS
+            value: "--max-model-len=32768 --gpu-memory-utilization=0.92 --reasoning-parser=qwen3 --enable-auto-tool-choice --tool-call-parser=qwen3_coder"
+        resources:
+          requests:
+            cpu: "2"
+            memory: 16Gi
+            nvidia.com/gpu: "1"
+          limits:
+            cpu: "8"
+            memory: 32Gi
+            nvidia.com/gpu: "1"
+    tolerations:
+      - key: nvidia.com/gpu
+        operator: Exists
+        effect: NoSchedule

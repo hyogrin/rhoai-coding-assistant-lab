@@ -28,8 +28,8 @@ flowchart TB
             DuckDuckGo[DuckDuckGo - Web Search]
         end
 
-        subgraph Inference["Model Serving (vLLM on RHOAI)"]
-            vLLM1[vLLM - Qwen3.6-35B-A3B]
+        subgraph Inference["Model Serving (llm-d on RHOAI)"]
+            vLLM1[LLMInferenceService - Qwen3-14B]
         end
     end
 
@@ -58,40 +58,35 @@ flowchart TB
 
 ```mermaid
 flowchart LR
-    IDE[Developer IDE] -->|API Key| GW[MaaS Gateway]
-    GW -->|Auth + Rate Limit| Model[vLLM - Qwen3.6-35B-A3B]
+    IDE[Developer IDE] -->|API Key| GW[Inference Gateway]
+    GW -->|Auth + Rate Limit| Model[llm-d - Qwen3-14B]
 ```
 
-| Model | Use Case | GPU | Deployment |
-|-------|----------|-----|------------|
-| Qwen3.6-35B-A3B (GPTQ-Int4) | Coding, reasoning, tool calling | 1x L40S (46GB) | InferenceService via OCI ModelCar |
+| Model | Use Case | GPU | MaaS | Deployment |
+|-------|----------|-----|:----:|------------|
+| Qwen3-14B (FP8) | Coding, reasoning, tool calling | 1x A100/L40S | Yes | **LLMInferenceService** (OCI modelcar) |
+| Qwen3-4B | Lightweight coding tasks | 1x L4/A10G | Yes | LLMInferenceService (OCI modelcar) |
 
-> **Note:** Model choices are configurable. Any model deployable on vLLM works. The default model uses MoE architecture (35B total, 3B active per token) for fast responses with large context (65K tokens). Models from [RedHatAI on Hugging Face](https://huggingface.co/RedHatAI) are also available as pre-quantized alternatives.
+> **Note:** Models are deployed via `LLMInferenceService` (llm-d) using OCI modelcar images from `quay.io/redhat-ai-services/modelcar-catalog`. This enables automatic MaaS Gateway registration, API key management, and token-based rate limiting. MaaS requires PostgreSQL 14+ — see `0_setup/0_prerequisites.md`.
 
-### Upgrade Options (Larger Models)
+### Upgrade Options (Larger Models — no MaaS)
 
-For teams with A100/H100 GPUs, pre-built vLLM container images with optimized serving configs are available:
+For teams with A100/H100 GPUs needing maximum model capability (not MaaS-compatible):
 
-| Model | Architecture | Weights | GPU | Concurrent 128K Seqs |
-|-------|-------------|---------|-----|---------------------|
-| [Qwen3.6-27B-FP8](https://github.com/eggboy/vllm-container-image/tree/main/qwen36-27b) | Dense (27B active) | FP8 (~28GB) | A100 80GB | 12 |
-| [Qwen3.6-35B-A3B](https://github.com/eggboy/vllm-container-image/tree/main/qwen36-35b-a3b) | MoE (35B total, 3B active) | GPTQ-Int4 (~18GB) | A100 80GB / L40S | 8 |
+| Model | Architecture | Weights | GPU | MaaS |
+|-------|-------------|---------|-----|:----:|
+| [Qwen3.6-27B-FP8](https://github.com/eggboy/vllm-container-image/tree/main/qwen36-27b) | Dense (27B active) | FP8 (~28GB) | A100 80GB | No |
+| [Qwen3.6-35B-A3B](https://github.com/eggboy/vllm-container-image/tree/main/qwen36-35b-a3b) | MoE (35B total, 3B active) | GPTQ-Int4 (~18GB) | A100 80GB / L40S | No |
 
-**Key differences:**
-- **27B Dense** — Maximum quality, all 27B parameters active per token. Best for complex code generation.
-- **35B-A3B MoE** — 35B knowledge with only 3B compute cost per token. Faster responses, ideal for team-shared coding assistants.
-
-Both include: chunked-prefill, GDN hybrid attention optimization, native tool calling (`--tool-call-parser qwen3_coder`), and reasoning mode (`--reasoning-parser qwen3`).
+> **Why no MaaS?** Qwen3.6 models use `Qwen3_5MoeForConditionalGeneration` architecture which requires upstream vLLM nightly — not the RHOAI-bundled runtime that MaaS/LLMInferenceService depends on.
 
 ```bash
-# Build and push to your registry (example: Quay.io)
+# Build and push to your registry (requires upstream vLLM)
 git clone https://github.com/eggboy/vllm-container-image.git
 cd vllm-container-image/qwen36-35b-a3b
-podman build -t quay.io/<namespace>/vllm-qwen36-35b-a3b:latest -f Dockerfile.vllm.a100 .
+podman build --platform linux/amd64 -t quay.io/<namespace>/vllm-qwen36-35b-a3b:latest -f Dockerfile.vllm.a100 .
 podman push quay.io/<namespace>/vllm-qwen36-35b-a3b:latest
 ```
-
-> **Tip:** On OpenShift, use a `BuildConfig` to avoid downloading ~18-28GB model weights locally.
 
 ## What's Included
 
@@ -118,6 +113,7 @@ podman push quay.io/<namespace>/vllm-qwen36-35b-a3b:latest
 * **3_run_and_control/1_ide_configuration.ipynb**: Configure IDEs (Cursor, VS Code, Claude Code, OpenCode) to use MaaS endpoints for both model calls and MCP tools.
 * **3_run_and_control/2_run_coding_assistant.ipynb**: Run the coding assistant end-to-end with Cursor IDE — code generation, MCP tool invocation, and inline editing.
 * **3_run_and_control/3_maas_advanced.ipynb**: Centralized control — subscription rate limits, API key lifecycle management, and observability.
+* **3_run_and_control/4_maas_policy_test.ipynb**: MaaS policy testing — create subscriptions with token limits, verify rate limiting enforcement (429 responses).
 
 ### 4. Developer Experience — Dev Spaces (Phase 4)
 
@@ -143,9 +139,10 @@ podman push quay.io/<namespace>/vllm-qwen36-35b-a3b:latest
 
 | Component | Version | Purpose |
 |-----------|---------|---------|
-| Red Hat OpenShift | 4.14+ | Container platform |
-| OpenShift AI (RHOAI) | 2.x+ | Model serving with vLLM + MaaS |
+| Red Hat OpenShift | 4.14+ (4.19+ for llm-d) | Container platform |
+| OpenShift AI (RHOAI) | 3.4+ | Model serving with vLLM + MaaS |
 | MaaS (Models as a Service) | — | Managed model gateway with auth & rate limiting |
+| PostgreSQL | 14+ | Required by MaaS for API key management |
 | NVIDIA GPU Operator | — | GPU support for model inference |
 | OpenShift Dev Spaces | 3.27+ | Cloud development environments (Phase 4) |
 | `oc` CLI | 4.14+ | Cluster management |
