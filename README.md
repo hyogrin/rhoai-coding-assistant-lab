@@ -5,8 +5,9 @@ A hands-on workshop for building a **centralized coding assistant infrastructure
 ## Architecture
 
 ```mermaid
-flowchart TB
+flowchart LR
     subgraph IDE["Developer IDEs"]
+        direction LR
         VSCode[VS Code Agent Mode]
         Cursor[Cursor IDE]
         ClaudeCode[Claude Code]
@@ -15,28 +16,35 @@ flowchart TB
     end
 
     subgraph OCP["Red Hat OpenShift"]
+        direction LR
+
         subgraph MaaS["MaaS Unified Gateway"]
+            direction TB
             Gateway[MaaS Gateway]
-            Auth[Authorino - Auth & API Keys]
-            RateLimit[Limitador - Rate Limiting]
+            Auth[Authorino<br/>Auth & API Keys]
+            RateLimit[Limitador<br/>Rate Limiting]
         end
 
-        subgraph MCP["MCP Servers (Streamable HTTP)"]
-            Context7[Context7 - Library Docs]
-            CodeSandbox[Code Sandbox - Execution]
-            Playwright[Playwright - Browser]
-            DuckDuckGo[DuckDuckGo - Web Search]
+        subgraph MCP["MCP Servers<br/>(Streamable HTTP)"]
+            direction LR
+            Context7[Context7<br/>Library Docs]
+            CodeSandbox[Code Sandbox<br/>Execution]
+            Playwright[Playwright<br/>Browser]
+            DuckDuckGo[DuckDuckGo<br/>Web Search]
         end
 
-        subgraph Inference["Model Serving (llm-d on RHOAI)"]
-            vLLM1[LLMInferenceService - Qwen3-14B]
+        subgraph Inference["Model Serving<br/>(llm-d on RHOAI)"]
+            direction TB
+            vLLM1[LLMInferenceService<br/>Qwen3-14B]
         end
     end
 
     IDE -->|Single API Key / HTTPS| Gateway
+
     Gateway --> Auth
     Auth --> RateLimit
     RateLimit -->|OpenAI API| vLLM1
+
     Gateway -->|MCP Proxy| MCP
 ```
 
