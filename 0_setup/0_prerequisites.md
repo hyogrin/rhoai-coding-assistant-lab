@@ -35,41 +35,30 @@
 
 ## MaaS (Models as a Service) Prerequisites
 
-MaaS requires a PostgreSQL database for API key lifecycle management. OpenShift AI does **not** provide PostgreSQL — you must provision and manage your own instance.
+MaaS requires PostgreSQL for API key lifecycle management. The setup is **automated by the notebook** (`3_maas/2_enable_maas.ipynb`).
 
-### PostgreSQL Setup
+### How it works
 
-1. Deploy PostgreSQL 14+ reachable from the OpenShift cluster network
-2. Create the `maas-db-config` Secret in the RHOAI applications namespace:
+| Scenario | What happens |
+|----------|-------------|
+| `MAAS_DB_CONNECTION_URL` set in `.env` | Notebook uses your existing PostgreSQL, creates `maas-db-config` Secret |
+| `MAAS_DB_CONNECTION_URL` **not** set | Notebook deploys PostgreSQL in-cluster automatically |
+| `maas-db-config` Secret already exists | Notebook skips PostgreSQL entirely |
+
+The notebook also handles:
+- DSC patch (`modelsAsService: Managed`)
+- Gateway TLS Secret creation
+- Tenant CR verification
+
+### If you have an existing PostgreSQL
+
+Set this in your `.env` file:
 
 ```bash
-oc create secret generic maas-db-config \
-  -n redhat-ods-applications \
-  --from-literal=DB_CONNECTION_URL='postgresql://USERNAME:PASSWORD@HOSTNAME:5432/DATABASE?sslmode=require'
+MAAS_DB_CONNECTION_URL=postgresql://USERNAME:PASSWORD@HOSTNAME:5432/DATABASE?sslmode=require
 ```
 
-3. Create the MaaS Gateway:
-
-```bash
-# Clone MaaS setup scripts
-git clone https://github.com/opendatahub-io/models-as-a-service.git
-cd models-as-a-service
-
-# For on-premise clusters
-INGRESS_MODE=clusterip ./scripts/setup-gateway.sh
-```
-
-4. Enable MaaS in DataScienceCluster:
-
-```yaml
-spec:
-  components:
-    kserve:
-      managementState: Managed
-      rawDeploymentServiceConfig: Headed
-      modelsAsService:
-        managementState: Managed
-```
+Then run `3_maas/2_enable_maas.ipynb` — it will skip installation and use your DB.
 
 > **Reference:** [MaaS Setup Guide](https://github.com/opendatahub-io/models-as-a-service/blob/main/docs/content/install/maas-setup.md)
 

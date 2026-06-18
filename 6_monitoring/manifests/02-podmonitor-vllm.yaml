@@ -1,0 +1,21 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: vllm-inference
+  namespace: demo
+  labels:
+    app: vllm-monitor
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/part-of: llminferenceservice
+  podMetricsEndpoints:
+    - port: "8000"
+      path: /metrics
+      interval: 15s
+      scheme: https
+      tlsConfig:
+        insecureSkipVerify: true
+  namespaceSelector:
+    matchNames:
+      - demo

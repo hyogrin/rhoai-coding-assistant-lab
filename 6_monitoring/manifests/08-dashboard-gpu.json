@@ -1,0 +1,122 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "title": "GPU Utilization (%)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "DCGM_FI_DEV_GPU_UTIL",
+          "legendFormat": "GPU {{gpu}} ({{exported_pod}})"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "percent", "max": 100, "min": 0 }
+      }
+    },
+    {
+      "title": "GPU Memory Used (GiB)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "expr": "DCGM_FI_DEV_FB_USED / 1024",
+          "legendFormat": "Used — GPU {{gpu}}"
+        },
+        {
+          "expr": "DCGM_FI_DEV_FB_FREE / 1024",
+          "legendFormat": "Free — GPU {{gpu}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "gibibytes" }
+      }
+    },
+    {
+      "title": "GPU Power Usage (W)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [
+        {
+          "expr": "DCGM_FI_DEV_POWER_USAGE",
+          "legendFormat": "GPU {{gpu}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "watt" }
+      }
+    },
+    {
+      "title": "GPU Temperature (C)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "targets": [
+        {
+          "expr": "DCGM_FI_DEV_GPU_TEMP",
+          "legendFormat": "GPU {{gpu}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "celsius" }
+      }
+    },
+    {
+      "title": "SM Clock (MHz)",
+      "type": "gauge",
+      "gridPos": { "h": 6, "w": 8, "x": 0, "y": 16 },
+      "targets": [
+        {
+          "expr": "DCGM_FI_DEV_SM_CLOCK",
+          "legendFormat": "GPU {{gpu}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "MHz" }
+      }
+    },
+    {
+      "title": "Memory Clock (MHz)",
+      "type": "gauge",
+      "gridPos": { "h": 6, "w": 8, "x": 8, "y": 16 },
+      "targets": [
+        {
+          "expr": "DCGM_FI_DEV_MEM_CLOCK",
+          "legendFormat": "GPU {{gpu}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "MHz" }
+      }
+    },
+    {
+      "title": "PCIe TX/RX (MB/s)",
+      "type": "timeseries",
+      "gridPos": { "h": 6, "w": 8, "x": 16, "y": 16 },
+      "targets": [
+        {
+          "expr": "DCGM_FI_DEV_PCIE_TX_THROUGHPUT / 1024",
+          "legendFormat": "TX — GPU {{gpu}}"
+        },
+        {
+          "expr": "DCGM_FI_DEV_PCIE_RX_THROUGHPUT / 1024",
+          "legendFormat": "RX — GPU {{gpu}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "MBs" }
+      }
+    }
+  ],
+  "schemaVersion": 39,
+  "tags": ["gpu", "nvidia", "dcgm"],
+  "templating": { "list": [] },
+  "time": { "from": "now-1h", "to": "now" },
+  "title": "GPU Metrics (NVIDIA DCGM)",
+  "uid": "gpu-dcgm-metrics"
+}

@@ -1,0 +1,90 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mcp-repo-docs
+  namespace: mcp-servers
+  labels:
+    app: mcp-repo-docs
+    app.kubernetes.io/part-of: code-assistant-lab
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mcp-repo-docs
+  template:
+    metadata:
+      labels:
+        app: mcp-repo-docs
+    spec:
+      containers:
+        - name: repo-docs
+          image: image-registry.openshift-image-registry.svc:5000/mcp-servers/mcp-repo-docs:latest
+          env:
+            - name: DOCS_DIR
+              value: /data/docs
+            - name: EMBED_MODEL
+              value: all-MiniLM-L6-v2
+          ports:
+            - containerPort: 8000
+              protocol: TCP
+          volumeMounts:
+            - name: docs-data
+              mountPath: /data/docs
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            failureThreshold: 30
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            periodSeconds: 60
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: 200m
+              memory: 1Gi
+            limits:
+              cpu: "2"
+              memory: 2Gi
+      volumes:
+        - name: docs-data
+          configMap:
+            name: cafe-docs
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mcp-repo-docs
+  namespace: mcp-servers
+  labels:
+    app: mcp-repo-docs
+spec:
+  selector:
+    app: mcp-repo-docs
+  ports:
+    - port: 8000
+      targetPort: 8000
+      protocol: TCP
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: mcp-repo-docs
+  namespace: mcp-servers
+spec:
+  to:
+    kind: Service
+    name: mcp-repo-docs
+  port:
+    targetPort: 8000
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect

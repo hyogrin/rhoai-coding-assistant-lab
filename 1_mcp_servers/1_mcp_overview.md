@@ -10,79 +10,101 @@ Not every tool needs MCP. We follow a pragmatic approach:
 
 | Approach | Use When | Examples |
 |----------|----------|---------|
-| **MCP Server** | No CLI equivalent exists, or secure sandboxed execution needed | Context7, Code Sandbox, Playwright, DuckDuckGo |
+| **MCP Server** | No CLI equivalent exists, or secure sandboxed execution needed | Context7, Code Sandbox, Codebase Search |
 | **AI Skills** | CLI already exists, model knows the commands | `gh`, `oc`, `git`, `curl` |
 | **Direct CLI** | Simple one-off commands | `oc get pods`, `gh issue list` |
 
-> **Why we removed GitHub/gh-grep/Sequential Thinking MCP servers:**
-> - `gh` CLI is already well-known to LLMs (training data from docs/StackOverflow)
-> - Sequential thinking is built into modern agent modes (Cursor, Claude Code)
+> **Why we keep MCP servers minimal:**
 > - Each MCP server consumes context tokens for tool definitions — fewer servers = more room for actual work
-> - See: [MCP is dead](https://www.quandri.io/engineering-blog/mcp-is-dead) for the full argument
+> - `gh` CLI is already well-known to LLMs (no GitHub MCP needed)
+> - Sequential thinking is built into modern agent modes (Cursor, Claude Code)
+> - We focus on tools that **cannot** be replicated via CLI
 
 ## Protocol Architecture
 
 ```mermaid
 sequenceDiagram
-    participant IDE as Developer IDE
-    participant Route as OpenShift Route (HTTPS)
+    participant IDE as IDE/Agent
+    participant Route as OpenShift Route (TLS)
     participant Pod as MCP Server Pod
-    participant API as External Service
+    participant Data as Data Source
 
-    IDE->>Route: MCP request over HTTPS (POST)
-    Route->>Pod: Forward to Service
-    Pod->>API: External API call (Context7, etc.)
-    API-->>Pod: Response
-    Pod-->>Route: MCP response
-    Route-->>IDE: HTTPS response (Streamable HTTP)
+    IDE->>Route: POST /mcp (JSON-RPC)
+    Route->>Pod: Forward
+    Pod->>Data: Query (embed/search)
+    Data-->>Pod: Results
+    Pod-->>Route: JSON-RPC Response
+    Route-->>IDE: Response
 ```
 
 ## Transport: Streamable HTTP (2026 Standard)
 
-| Transport | Protocol | Status |
-|-----------|----------|--------|
-| **Streamable HTTP** | HTTP POST (bidirectional) | ✅ Current standard |
-| ~~HTTP SSE~~ | ~~Server-Sent Events~~ | ~~Deprecated — single-connection crash-loops~~ |
-| **stdio** | stdin/stdout | Local only (not for team use) |
-
-Streamable HTTP supports multiple concurrent connections natively, avoiding the crash-loop issues of the older SSE transport.
+| Protocol | Status | Notes |
+|----------|--------|-------|
+| **Streamable HTTP** | Standard | All servers expose `POST /mcp` |
+| SSE | Deprecated | Replaced by Streamable HTTP |
+| stdio | Local only | Wrapped by `supergateway` for cluster deployment |
 
 ## MCP Servers in This Lab
 
-| Server | Purpose | External Dependency | Transport |
-|--------|---------|---------------------|-----------|
-| **Context7** | Library documentation lookup | mcp.context7.com (HTTP) | supergateway → Streamable HTTP |
-| **Code Sandbox** | Secure Python/Bash/Node execution | None (local) | Custom Python server |
-| **Playwright** | Browser automation & testing | None (local Chromium) | supergateway → Streamable HTTP |
-| **DuckDuckGo** | Web search & content fetching | duckduckgo.com (HTTP) | supergateway → Streamable HTTP |
+| Server | Purpose | Air-gapped | External Dependency | Transport |
+|--------|---------|:----------:|---------------------|-----------|
+| **Context7** | Library documentation lookup | No | mcp.context7.com (HTTP) | supergateway → Streamable HTTP |
+| **DuckDuckGo** | Web search & content fetching | No | duckduckgo.com (HTTP) | supergateway → Streamable HTTP |
+| **Code Sandbox** | Secure Python/Bash/Node execution | Yes | None (local) | Native Streamable HTTP |
+| **Codebase Search** | Semantic code search (internal) | Yes | None (local embeddings) | supergateway → Streamable HTTP |
+| **Repo Docs** | Internal documentation Q&A | Yes | None (local embeddings) | supergateway → Streamable HTTP |
+
+### Public vs Air-gapped Deployment
+
+```
+┌─────────────────────────────────────────────────────┐
+│  PUBLIC (인터넷 연결)        │  AIR-GAPPED (폐쇄망)   │
+├─────────────────────────────┼───────────────────────┤
+│  Context7        ✅         │           ❌           │
+│  DuckDuckGo      ✅         │           ❌           │
+│  Code Sandbox    ✅         │  Code Sandbox    ✅    │
+│  Codebase Search ✅         │  Codebase Search ✅    │
+│  Repo Docs       ✅         │  Repo Docs       ✅    │
+├─────────────────────────────┼───────────────────────┤
+│  5 servers                  │  3 servers             │
+└─────────────────────────────┴───────────────────────┘
+```
+
+### Custom AI Servers (Codebase Search & Repo Docs)
+
+These servers demonstrate **enterprise RAG** over internal codebases and documentation:
+
+- **Embedding Model**: `all-MiniLM-L6-v2` (384-dim, ~80MB, runs on CPU)
+- **Vector Store**: In-memory numpy (no external DB needed)
+- **Indexing**: At pod startup — reads source/docs from mounted ConfigMap
+- **Air-gapped**: Fully functional without internet (model baked into image)
 
 ## Deployment Strategy on OpenShift
 
 ```mermaid
-flowchart TB
-    subgraph "OpenShift Cluster"
-        subgraph "mcp-servers namespace"
-            D1[Deployment: mcp-playwright]
-            D2[Deployment: mcp-context7]
-            D3[Deployment: mcp-code-sandbox]
-            D4[Deployment: mcp-duckduckgo]
-
-            S1[Service :3004]
-            S2[Service :3001]
-            S3[Service :3005]
-            S4[Service :3006]
-        end
-
-        R1[Route: mcp-playwright]
-        R2[Route: mcp-context7]
-        R3[Route: mcp-code-sandbox]
-        R4[Route: mcp-duckduckgo]
+flowchart TD
+    subgraph ns [mcp-servers namespace]
+        CTX[Context7 Pod]
+        DDG[DuckDuckGo Pod]
+        CS[Code Sandbox Pod]
+        CBS[Codebase Search Pod]
+        RD[Repo Docs Pod]
     end
 
-    IDE[Developer IDE] -->|HTTPS POST /mcp| R1
-    IDE -->|HTTPS POST /mcp| R2
-    IDE -->|HTTPS POST /mcp| R3
-    IDE -->|HTTPS POST /mcp| R4
+    subgraph data [ConfigMaps]
+        SRC[cafe-source-code]
+        DOCS[cafe-docs]
+    end
+
+    SRC -->|mount /data/source| CBS
+    DOCS -->|mount /data/docs| RD
+
+    CTX --> R1[Route: mcp-context7]
+    DDG --> R2[Route: mcp-duckduckgo]
+    CS --> R3[Route: mcp-code-sandbox]
+    CBS --> R4[Route: mcp-codebase-search]
+    RD --> R5[Route: mcp-repo-docs]
 ```
 
 Each MCP server is deployed as:
@@ -90,7 +112,9 @@ Each MCP server is deployed as:
 - **Service** — Internal cluster networking
 - **Route** — External HTTPS endpoint (with TLS termination)
 
-**Key insight:** stdio-based MCP servers (Playwright, DuckDuckGo) are wrapped with `supergateway --outputTransport streamableHttp` inside the container to expose them as Streamable HTTP endpoints (`POST /mcp`).
+Custom AI servers additionally use:
+- **BuildConfig** — Build container image with pre-downloaded embedding model
+- **ConfigMap** — Mount source code/documentation for indexing
 
 ## Next Steps
 

@@ -25,5 +25,8 @@ uv.lock
 # Reference files (temporary, not part of lab content)
 ref/
 
+# SQLite databases (generated at runtime)
+*.db
+
 # Agent transcripts
 agent-transcripts/
