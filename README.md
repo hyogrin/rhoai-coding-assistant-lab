@@ -1,147 +1,114 @@
 # RHOAI Code Assistant Lab
 
-A hands-on workshop for building a **centralized coding assistant infrastructure** on **Red Hat OpenShift AI (RHOAI)**. This lab guides you through deploying shared MCP tool servers, enabling **Models as a Service (MaaS)** for managed model access, and **Dev Spaces** for team-scale developer onboarding — no external LLM API keys required.
+A hands-on workshop for building a **centralized coding assistant infrastructure** on **Red Hat OpenShift AI (RHOAI)**. Deploy shared MCP tool servers, enable **Models as a Service (MaaS)** for managed model access, and validate end-to-end with benchmarks — no external LLM API keys required.
 
 ## Architecture
 
 ```mermaid
-flowchart LR
+flowchart TB
     subgraph IDE["Developer IDEs"]
-        direction LR
-        VSCode[VS Code Agent Mode]
         Cursor[Cursor IDE]
+        VSCode[VS Code Agent Mode]
         ClaudeCode[Claude Code]
-        OpenCode[OpenCode CLI]
-        DevSpaces[Dev Spaces Workspaces]
     end
 
     subgraph OCP["Red Hat OpenShift"]
-        direction LR
-
-        subgraph MaaS["MaaS Unified Gateway"]
-            direction TB
+        subgraph MaaS["MaaS Gateway (Phase 3)"]
             Gateway[MaaS Gateway]
-            Auth[Authorino<br/>Auth & API Keys]
-            RateLimit[Limitador<br/>Rate Limiting]
+            Auth[Authorino - Auth & API Keys]
+            RateLimit[Limitador - Rate Limiting]
         end
 
-        subgraph MCP["MCP Servers<br/>(Streamable HTTP)"]
-            direction LR
-            Context7[Context7<br/>Library Docs]
-            CodeSandbox[Code Sandbox<br/>Execution]
-            Playwright[Playwright<br/>Browser]
-            DuckDuckGo[DuckDuckGo<br/>Web Search]
+        subgraph MCP["MCP Servers (5 total)"]
+            Context7[Context7 - Library Docs]
+            DuckDuckGo[DuckDuckGo - Web Search]
+            CodeSandbox[Code Sandbox - Execution]
+            CodeSearch[Codebase Search - Code RAG]
+            RepoDocs[Repo Docs - Doc Q&A]
         end
 
-        subgraph Inference["Model Serving<br/>(llm-d on RHOAI)"]
-            direction TB
-            vLLM1[LLMInferenceService<br/>Qwen3-14B]
+        subgraph Inference["Model Serving (llm-d on RHOAI)"]
+            vLLM1[LLMInferenceService - Qwen3-14B]
         end
     end
 
     IDE -->|Single API Key / HTTPS| Gateway
-
     Gateway --> Auth
     Auth --> RateLimit
     RateLimit -->|OpenAI API| vLLM1
-
     Gateway -->|MCP Proxy| MCP
 ```
 
-## How It Works
+## Lab Flow
 
-| Phase | Focus | Key Outcome |
-|-------|-------|-------------|
-| **0 — Setup** | Prerequisites & environment | Models deployed on RHOAI |
-| **1 — MCP Servers** | Deploy shared tool servers | MCP tools accessible via Streamable HTTP |
-| **2 — MaaS Gateway** | Unified gateway with auth | Single API key for models + MCP tools |
-| **3 — Run & Control** | IDE integration & operations | End-to-end coding assistant |
-| **4 — Developer Experience** | Dev Spaces & extensions | Team-scale onboarding with pre-configured IDEs |
-| **5 — Benchmarks** | Performance validation | Capacity planning with real metrics |
-| **6 — IDE Integration Test** | Agent mode verification | Screenshots of working coding assistant |
+| Phase | Folder | Focus | Key Outcome |
+|-------|--------|-------|-------------|
+| **0** | `0_setup/` | Environment & models | Models deployed, demo app ready |
+| **1** | `1_mcp_servers/` | MCP tool servers | 5 MCP servers accessible via Routes |
+| **2** | `2_basic_run/` | Run coding assistant | Public vs air-gapped comparison |
+| **3** | `3_maas/` | MaaS gateway | Unified auth & API key management |
+| **4** | `4_control/` | Centralized control | Rate limiting & policy enforcement |
+| **5** | `5_benchmarks/` | Performance validation | Capacity planning with real metrics |
 
-> Together: models provide the **"brain"** (inference), MCP tools provide the **"hands"** (actions), MaaS provides **"governance"** (auth, rate limiting, API keys), and AI Skills provide **"knowledge"** (domain-specific instructions) — all accessed via a single API key.
+> Together: models provide the **"brain"** (inference), MCP tools provide the **"hands"** (actions), MaaS provides **"governance"** (auth, rate limiting, API keys), and AI Skills provide **"knowledge"** (domain-specific instructions).
 
 ## Model Serving Strategy
 
-```mermaid
-flowchart LR
-    IDE[Developer IDE] -->|API Key| GW[Inference Gateway]
-    GW -->|Auth + Rate Limit| Model[llm-d - Qwen3-14B]
-```
-
 | Model | Use Case | GPU | MaaS | Deployment |
 |-------|----------|-----|:----:|------------|
-| Qwen3-14B (FP8) | Coding, reasoning, tool calling | 1x A100/L40S | Yes | **LLMInferenceService** (OCI modelcar) |
+| Qwen3-14B (FP8) | Coding, reasoning, tool calling | 1x A100/L40S | Yes | LLMInferenceService (OCI modelcar) |
 | Qwen3-4B | Lightweight coding tasks | 1x L4/A10G | Yes | LLMInferenceService (OCI modelcar) |
 
-> **Note:** Models are deployed via `LLMInferenceService` (llm-d) using OCI modelcar images from `quay.io/redhat-ai-services/modelcar-catalog`. This enables automatic MaaS Gateway registration, API key management, and token-based rate limiting. MaaS requires PostgreSQL 14+ — see `0_setup/0_prerequisites.md`.
+> Models are deployed via `LLMInferenceService` (llm-d) using OCI modelcar images from `quay.io/redhat-ai-services/modelcar-catalog`.
 
-### Upgrade Options (Larger Models — no MaaS)
+## MCP Servers
 
-For teams with A100/H100 GPUs needing maximum model capability (not MaaS-compatible):
-
-| Model | Architecture | Weights | GPU | MaaS |
-|-------|-------------|---------|-----|:----:|
-| [Qwen3.6-27B-FP8](https://github.com/eggboy/vllm-container-image/tree/main/qwen36-27b) | Dense (27B active) | FP8 (~28GB) | A100 80GB | No |
-| [Qwen3.6-35B-A3B](https://github.com/eggboy/vllm-container-image/tree/main/qwen36-35b-a3b) | MoE (35B total, 3B active) | GPTQ-Int4 (~18GB) | A100 80GB / L40S | No |
-
-> **Why no MaaS?** Qwen3.6 models use `Qwen3_5MoeForConditionalGeneration` architecture which requires upstream vLLM nightly — not the RHOAI-bundled runtime that MaaS/LLMInferenceService depends on.
-
-```bash
-# Build and push to your registry (requires upstream vLLM)
-git clone https://github.com/eggboy/vllm-container-image.git
-cd vllm-container-image/qwen36-35b-a3b
-podman build --platform linux/amd64 -t quay.io/<namespace>/vllm-qwen36-35b-a3b:latest -f Dockerfile.vllm.a100 .
-podman push quay.io/<namespace>/vllm-qwen36-35b-a3b:latest
-```
+| Server | Type | Air-gapped | Key Tools |
+|--------|------|:----------:|-----------|
+| Context7 | External API | No | `resolve-library-id`, `get-library-docs` |
+| DuckDuckGo | External API | No | `duckduckgo_search`, `duckduckgo_fetch_content` |
+| Code Sandbox | Local | Yes | `execute_code`, `read_file`, `write_file` |
+| Codebase Search | Local AI | Yes | `search_code`, `get_file`, `list_files` |
+| Repo Docs | Local AI | Yes | `search_docs`, `list_docs` |
 
 ## What's Included
 
-### 0. Setup
+### Phase 0 — Setup
 
-* **0_setup/0_prerequisites.md**: Required access, tools, and environment preparation.
-* **0_setup/1_environment_setup.ipynb**: Verify cluster access, deploy models on RHOAI, and test InferenceService endpoints.
+* `0_setup/0_prerequisites.md` — Required access, tools, environment preparation
+* `0_setup/1_environment_setup.ipynb` — Verify cluster, deploy models on RHOAI
+* `0_setup/2_app_setup.ipynb` — Deploy the `cafe-order-system` demo app (target for MCP servers)
 
-### 1. MCP Servers (Phase 1)
+### Phase 1 — MCP Servers
 
-* **1_mcp_servers/1_mcp_overview.md**: Introduction to MCP protocol, server types, and deployment strategies on OpenShift.
-* **1_mcp_servers/2_deploy_mcp_servers.ipynb**: Deploy 4 MCP servers to OpenShift (Context7, Playwright, Code Sandbox, DuckDuckGo) using Streamable HTTP transport.
-* **1_mcp_servers/3_connect_ide_clients.ipynb**: Configure IDEs to connect to MCP servers via OpenShift Routes.
+* `1_mcp_servers/1_mcp_overview.md` — MCP protocol, server types, deployment strategy
+* `1_mcp_servers/2_deploy_mcp_servers.ipynb` — Deploy 5 MCP servers (Context7, DuckDuckGo, Code Sandbox, Codebase Search, Repo Docs)
+* `1_mcp_servers/3_integrate_mcp_catalog.ipynb` — Register with MCP Gateway & RHOAI Catalog (MCPServerRegistration, tool aggregation)
+* `1_mcp_servers/4_connect_ide_clients.ipynb` — Configure IDEs to connect via Routes
 
-### 2. Models as a Service — Unified Gateway (Phase 2)
+### Phase 2 — Run the Coding Assistant
 
-* **2_ai_gateway/1_maas_overview.md**: MaaS architecture — unified gateway for models and MCP tools with managed auth, rate limiting, and API key management.
-* **2_ai_gateway/2_enable_maas.ipynb**: Enable MaaS on RHOAI, register MCP servers with the gateway, and create API keys.
-* **2_ai_gateway/3_test_model_serving.ipynb**: Test inference, streaming, rate limiting, and concurrent access.
-* **2_ai_gateway/4_test_mcp_servers.ipynb**: Test MCP server access through the MaaS gateway with auth enforcement.
+* `2_basic_run/1_ide_configuration.ipynb` — Configure IDEs with MCP server Routes
+* `2_basic_run/2_run_public_coding_assistant.ipynb` — **Public network**: all 5 MCP tools active (Context7 + DuckDuckGo + local tools)
+* `2_basic_run/3_run_closed_coding_assistant.ipynb` — **Air-gapped**: 3 local tools only (Codebase Search + Repo Docs + Code Sandbox)
 
-### 3. Run the Coding Assistant & Centralized Control (Phase 3)
+### Phase 3 — MaaS Gateway
 
-* **3_run_and_control/1_ide_configuration.ipynb**: Configure IDEs (Cursor, VS Code, Claude Code, OpenCode) to use MaaS endpoints for both model calls and MCP tools.
-* **3_run_and_control/2_run_coding_assistant.ipynb**: Run the coding assistant end-to-end with Cursor IDE — code generation, MCP tool invocation, and inline editing.
-* **3_run_and_control/3_maas_advanced.ipynb**: Centralized control — subscription rate limits, API key lifecycle management, and observability.
-* **3_run_and_control/4_maas_policy_test.ipynb**: MaaS policy testing — create subscriptions with token limits, verify rate limiting enforcement (429 responses).
+* `3_maas/1_maas_overview.md` — MaaS architecture, prerequisites (RHCL, MetalLB), CRD reference
+* `3_maas/2_enable_maas.ipynb` — Verify platform, register model (MaaSModelRef), create policies + API keys, register MCP servers
+* `3_maas/3_test_model_serving.ipynb` — Inference, streaming, auth enforcement (401/403 verification)
+* `3_maas/4_test_mcp_servers.ipynb` — MCP protocol tests through gateway, direct vs gateway comparison
 
-### 4. Developer Experience — Dev Spaces (Phase 4)
+### Phase 4 — Centralized Control
 
-* **4_developer_experience/1_devspaces_overview.md**: Dev Spaces integration — AI extension comparison (Continue vs Cline vs Roo Code), tool calling configuration, and DevWorkspace architecture.
-* **4_developer_experience/2_configure_devworkspace.ipynb**: Deploy DevWorkspace with pre-configured AI extensions connected to MaaS gateway.
-* **4_developer_experience/3_test_extensions.ipynb**: Test tool calling, streaming behavior, and troubleshoot common extension issues.
+* `4_control/1_maas_advanced.ipynb` — Multi-tier demo (Free 500 tok/min vs Premium 50K tok/min), API key lifecycle, Prometheus observability
+* `4_control/2_maas_policy_test.ipynb` — Rate limit trigger (429), recovery after window reset, policy enforcement
 
-### 5. Performance Benchmarks (Phase 5)
+### Phase 5 — Benchmarks
 
-* **5_benchmarks/1_benchmarks_overview.md**: Benchmarking methodology — GuideLLM, key metrics (TTFT, ITL, tok/s), capacity planning, and reference GPU performance data.
-* **5_benchmarks/2_run_benchmarks.ipynb**: Run GuideLLM benchmarks via EvalHub SDK — single-user latency, sweep, and throughput tests with automatic MLflow tracking.
-* **5_benchmarks/3_capacity_planning.ipynb**: Translate benchmark results into team capacity — multi-replica projections and cost analysis.
-
-> **Requires:** EvalHub service + GuideLLM provider registered in `demo` namespace. EvalHub SA (`demo:evalhub-service`) must have RBAC to create ConfigMaps/Pods in the target namespace. See `1_benchmarks_overview.md` for details.
-
-### 6. IDE Integration Test (Phase 6)
-
-* **6_ide_integration_test/1_cursor_agent_mode.ipynb**: Cursor IDE Agent mode — discover endpoints, verify connectivity, configure, and test multi-step agent workflows.
-* **6_ide_integration_test/2_vscode_continue.ipynb**: VS Code + Continue extension — auto-generate config, test chat, inline edit, and MCP tool calling.
-* **6_ide_integration_test/3_claude_code_cli.ipynb**: Claude Code CLI — environment setup, MCP configuration, and terminal-based agent testing.
+* `5_benchmarks/1_benchmarks_overview.md` — GuideLLM methodology, key metrics (TTFT, ITL, tok/s)
+* `5_benchmarks/2_run_benchmarks.ipynb` — Run benchmarks via EvalHub SDK
+* `5_benchmarks/3_capacity_planning.ipynb` — Translate results into team capacity projections
 
 ## Prerequisites
 
@@ -149,16 +116,17 @@ podman push quay.io/<namespace>/vllm-qwen36-35b-a3b:latest
 |-----------|---------|---------|
 | Red Hat OpenShift | 4.14+ (4.19+ for llm-d) | Container platform |
 | OpenShift AI (RHOAI) | 3.4+ | Model serving with vLLM + MaaS |
-| MaaS (Models as a Service) | — | Managed model gateway with auth & rate limiting |
+| Red Hat Connectivity Link (RHCL) | 1.3+ | Gateway API + Authorino (auth) + Limitador (rate limiting) |
+| MaaS (Models as a Service) | — | Managed model gateway (`modelsAsService: Managed` in DSC) |
 | PostgreSQL | 14+ | Required by MaaS for API key management |
+| MetalLB Operator | — | External IP for Gateway — **bare-metal only** |
 | NVIDIA GPU Operator | — | GPU support for model inference |
-| OpenShift Dev Spaces | 3.27+ | Cloud development environments (Phase 4) |
 | `oc` CLI | 4.14+ | Cluster management |
 | Python | 3.11+ | Jupyter notebooks |
 
 ## Quick Start
 
-1. Clone this repo into your OpenShift AI Workbench:
+1. Clone this repo:
 ```bash
 git clone https://github.com/hyogrin/rhoai-code-assistant-lab.git
 cd rhoai-code-assistant-lab
@@ -170,41 +138,28 @@ cp sample.env .env
 # Edit .env with your tokens and cluster info
 ```
 
-3. Install AI skills (optional, for Cursor/Claude Code users):
+3. Install AI skills (optional):
 ```bash
-# Install lola CLI, then add RHOAI skills
 lola mod add https://github.com/hyogrin/hyo-rhoai-skills.git
 lola install hyo-rhoai-skills -a cursor
 ```
 
-4. Follow the phased approach:
-   - **Phases 0–3**: Core setup (models, MCP servers, MaaS gateway, IDE integration)
-   - **Phase 4**: Enable Dev Spaces for team onboarding
-   - **Phase 5**: Benchmark and validate capacity
-   - **Phase 6**: IDE integration test — verify Agent mode with screenshots
+4. Follow phases 0-5 in order.
 
 ## AI Skills (Cursor / Claude Code)
 
-This lab uses AI skills from **[hyo-rhoai-skills](https://github.com/hyogrin/hyo-rhoai-skills)** — production-ready skills for Red Hat OpenShift AI model deployment and operations. Install via `lola` (see Quick Start step 3).
-
-Key skills included:
+This lab uses AI skills from **[hyo-rhoai-skills](https://github.com/hyogrin/hyo-rhoai-skills)** — production-ready skills for RHOAI model deployment and operations.
 
 | Skill | Description |
 |-------|-------------|
-| `/hf-model-deploy` | Stable model weight acquisition (OCI ModelCar, S3, PVC) |
 | `/model-deploy` | Deploy AI/ML models with vLLM, NIM, or Caikit runtimes |
+| `/hf-model-deploy` | Stable model weight acquisition (OCI ModelCar, S3, PVC) |
 | `/debug-inference` | Troubleshoot failed InferenceService deployments |
-| `/ai-observability` | Analyze model performance and GPU utilization |
-| `/ds-project-setup` | Create and configure Data Science Projects |
-
-> **See:** [hyo-rhoai-skills README](https://github.com/hyogrin/hyo-rhoai-skills) for the full list of available skills and MCP server configurations.
-
-> **Note:** All components run within OpenShift. No external LLM API subscriptions required — models are self-hosted on RHOAI with vLLM, accessed through MaaS.
 
 ## Related Projects
 
-* [Private AI Coding Assistant](https://github.com/manujoy7/Private_AI_Coding_Assistant) — Production reference architecture for private AI code assistants on ROSA HCP and ARO, with multi-accelerator benchmarks and GitOps deployment.
+* [Private AI Coding Assistant](https://github.com/manujoy7/Private_AI_Coding_Assistant) — Production reference architecture for private AI code assistants on ROSA HCP and ARO.
 
 ## About
 
-This workshop demonstrates how to build a fully self-contained, enterprise-grade coding assistant infrastructure on Red Hat OpenShift AI — from model serving through tool integration and developer onboarding, to performance validation and enterprise customization — without dependency on external AI API providers.
+This workshop demonstrates how to build a fully self-contained, enterprise-grade coding assistant infrastructure on Red Hat OpenShift AI — from model serving through tool integration to performance validation — without dependency on external AI API providers.
