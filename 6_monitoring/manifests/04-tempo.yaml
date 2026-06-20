@@ -1,0 +1,15 @@
+apiVersion: tempo.grafana.com/v1alpha1
+kind: TempoMonolithic
+metadata:
+  name: lab
+  namespace: monitoring
+spec:
+  multitenancy:
+    enabled: true
+    mode: openshift
+    authentication:
+      - tenantName: dev
+        tenantId: dev
+  storage:
+    traces:
+      backend: memory

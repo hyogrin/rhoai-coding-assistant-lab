@@ -1,0 +1,28 @@
+# Coding Evaluation Adapter for EvalHub
+# Evaluates HumanEval+ / MBPP+ via mcp-code-sandbox (air-gap safe)
+FROM registry.access.redhat.com/ubi9/python-311:latest
+
+USER 0
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY main.py .
+
+# Pre-download EvalPlus datasets so the image is self-contained (air-gap safe)
+ENV EVALPLUS_CACHE_DIR=/app/evalplus_data
+RUN python3 -c "from evalplus.data import get_human_eval_plus, get_mbpp_plus; get_human_eval_plus(); get_mbpp_plus()"
+
+RUN mkdir -p /tmp/.cache && \
+    chmod -R 777 /tmp && \
+    chown -R 1001:0 /app && \
+    chmod -R g+rwX /app
+
+ENV PYTHONUNBUFFERED=1
+ENV EVALHUB_MODE=k8s
+ENV HOME=/tmp
+
+USER 1001
+
+ENTRYPOINT ["python", "main.py"]

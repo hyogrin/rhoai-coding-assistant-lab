@@ -1,28 +1,61 @@
-# Performance Benchmarks — Overview
+# Coding Evaluation Benchmarks — Overview
 
-## Why Benchmark Your AI Infrastructure?
+## Why Evaluate Coding Ability?
 
-Self-hosted coding assistants sit on the critical path for developer productivity. Without measured performance data, teams either **over-provision** expensive GPU capacity or **under-provision** and hit latency spikes during peak usage.
+Self-hosted coding assistants sit on the critical path for developer productivity. Deploying a model is only the beginning — you need to verify that the model **actually writes correct code** before onboarding developers.
 
-Benchmarking answers three operational questions:
+Coding evaluation answers two key questions:
 
 | Question | What You Learn |
 |----------|----------------|
-| **Capacity planning** | How many developers can one GPU replica support? |
-| **SLO validation** | Does TTFT stay under your target (e.g., &lt; 500 ms) at expected load? |
-| **Regression detection** | Did a model upgrade, routing change, or config tweak hurt throughput? |
+| **Coding accuracy** | Does the model produce correct, functional code? (pass@1) |
+| **Regression detection** | Did a model upgrade or config change hurt code quality? |
 
 ```mermaid
 flowchart LR
-    BENCH[GuideLLM Benchmarks] --> METRICS[TTFT / ITL / tok/s]
-    METRICS --> CAP[Capacity Model]
-    CAP --> SLO[SLO Validation]
-    CAP --> COST[Cost / Replica Planning]
-    SLO --> DEPLOY[Right-size Deployment]
-    COST --> DEPLOY
+    NB[Notebook / EvalHub SDK] -->|submit job| EH[EvalHub Service]
+    EH -->|coding job| CODING[Coding Eval Adapter Pod]
+    CODING -->|"generate code"| vLLM[vLLM / MaaS]
+    CODING -->|"execute tests"| SANDBOX["mcp-code-sandbox"]
+    EH -->|tracking| MLFLOW[MLflow]
 ```
 
-> **Lab scenario:** You deployed a coding model on RHOAI with vLLM. Before onboarding developers, run benchmarks to confirm the cluster can sustain interactive coding assistant workloads — not just a single curl test.
+> **Lab scenario:** You deployed a coding model on RHOAI with vLLM. Before onboarding developers, evaluate its coding ability using HumanEval+ and MBPP+ benchmarks — all tracked in MLflow.
+
+## Coding Evaluation
+
+| Benchmark | Problems | Adapter | Metric |
+|-----------|----------|---------|--------|
+| HumanEval+ | 164 (50 sampled) | Coding Eval | pass@1 (greedy) |
+| MBPP+ | 399 (30 sampled) | Coding Eval | pass@1 (greedy) |
+
+Results are tracked in MLflow, enabling comparison across model upgrades or configuration changes.
+
+## Coding Evaluation Benchmarks
+
+### HumanEval+ (pass@1)
+
+[HumanEval+](https://github.com/evalplus/evalplus) extends OpenAI's HumanEval with **80x more test cases** per problem. Each problem provides a Python function signature with docstring; the model must generate the function body.
+
+- **164 problems** covering algorithms, data structures, string processing, math
+- **Greedy pass@1**: single attempt at temperature=0, all test cases must pass
+- **Test execution via mcp-code-sandbox**: air-gap safe, no `HF_ALLOW_CODE_EVAL` needed
+
+### MBPP+ (pass@1)
+
+[MBPP+](https://github.com/evalplus/evalplus) extends Google's Mostly Basic Python Problems with **35x more test cases**. Each problem provides a natural language description with examples; the model must write the complete function.
+
+- **399 problems** (test split) covering basic programming tasks
+- **Greedy pass@1**: same evaluation approach as HumanEval+
+- **Test execution via mcp-code-sandbox**: identical sandboxed execution
+
+### Code Execution via mcp-code-sandbox
+
+The coding eval adapter does **not** execute generated code internally. Instead, it sends code + test assertions to the `mcp-code-sandbox` MCP server (already deployed in the cluster from Phase 1). This provides:
+
+- **Security**: code runs in an isolated sandbox pod with resource limits
+- **Air-gap safety**: no external network access needed at evaluation time
+- **Consistency**: same execution environment for all test runs
 
 ## Key Metrics
 
@@ -180,29 +213,30 @@ Estimated cloud GPU pricing (on-demand, US regions, approximate) compared agains
 | Component | Purpose |
 |-----------|---------|
 | Phases 0–3 completed | Cluster access, MaaS gateway, model deployed |
-| EvalHub deployed (`demo` ns) | Orchestrates GuideLLM jobs and tracks results in MLflow |
-| GuideLLM provider registered | EvalHub에 GuideLLM provider 등록 필요 |
-| EvalHub SA RBAC | `evalhub-service` SA가 `demo` ns에서 configmaps/pods/jobs 생성 가능해야 함 |
-| MaaS `/health` pass-through | GuideLLM backend validation을 위한 HTTPRoute 필요 |
+| EvalHub deployed (`demo` ns) | Orchestrates adapter jobs and tracks results in MLflow |
+| GuideLLM provider registered | Performance benchmarking via EvalHub |
+| mcp-code-sandbox deployed (`mcp-servers` ns) | Sandboxed code execution for coding benchmarks |
+| EvalHub SA RBAC | `evalhub-service` SA needs configmaps/pods/jobs permissions in target namespace |
+| MaaS `/health` pass-through | HTTPRoute for GuideLLM backend validation |
 | API key or OCP token | Authenticate to MaaS and EvalHub endpoints |
 | GPU node with model running | vLLM serving Qwen or equivalent |
 
 ### EvalHub ServiceAccount RBAC
 
-EvalHub는 벤치마크 실행 시 대상 네임스페이스에 ConfigMap과 Pod를 생성합니다. `demo` 네임스페이스 내에서 작업하므로 별도 설정이 필요 없지만, 다른 네임스페이스를 tenant로 사용하는 경우:
+EvalHub creates ConfigMaps and Pods in the target namespace when running benchmarks. Working within the `demo` namespace requires no additional setup, but for other namespaces:
 
 ```bash
-# EvalHub SA에 대상 네임스페이스 권한 부여
 oc create rolebinding evalhub-manager -n <target-namespace> \
   --clusterrole=admin \
   --serviceaccount=demo:evalhub-service
 ```
 
-### 확인 명령
+### Verification Commands
 
 ```bash
-# Model reachable via MaaS
 CLUSTER_DOMAIN=$(oc get ingresses.config.openshift.io cluster -o jsonpath='{.spec.domain}')
+
+# Model reachable via MaaS
 curl -sSk "https://maas-api.${CLUSTER_DOMAIN}/v1/models" \
   -H "Authorization: Bearer $(oc whoami -t)" | jq '.data[].id'
 
@@ -211,10 +245,13 @@ curl -sSk "https://evalhub-demo.${CLUSTER_DOMAIN}/health"
 
 # MaaS /health pass-through (GuideLLM validation)
 curl -sSk "https://maas-api.${CLUSTER_DOMAIN}/health"
+
+# mcp-code-sandbox health check
+oc get pod -n mcp-servers -l app=mcp-code-sandbox
 ```
 
 ## Next Steps
 
-→ Continue to `2_run_benchmarks.ipynb` to install GuideLLM, benchmark your MaaS endpoint, and parse TTFT / ITL / throughput results.
+→ Continue to `2_run_benchmarks.ipynb` to run the **unified evaluation** (coding accuracy + performance) and view results in MLflow.
 
 → Then run `3_capacity_planning.ipynb` to translate benchmark numbers into team sizing, multi-replica projections, and cost recommendations.

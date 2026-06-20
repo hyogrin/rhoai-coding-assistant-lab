@@ -1,0 +1,67 @@
+# Coding Evaluation — Custom Adapter Provider
+#
+# Evaluates LLM coding ability on HumanEval+ and MBPP+ benchmarks.
+# Code is generated via vLLM and executed against test suites in
+# mcp-code-sandbox (air-gap safe, no HF_ALLOW_CODE_EVAL needed).
+
+id: coding_eval
+name: Coding Evaluation
+description: >
+  Coding evaluation adapter for HumanEval+ and MBPP+ benchmarks.
+  Generates code completions via vLLM, executes test suites in
+  mcp-code-sandbox for air-gap safe evaluation. Reports pass@1 metrics.
+
+runtime:
+  k8s:
+    image: image-registry.openshift-image-registry.svc:5000/${NAMESPACE}/coding-eval-adapter:latest
+    entrypoint:
+      - python
+      - main.py
+    cpu_request: 200m
+    memory_request: 512Mi
+    cpu_limit: "1"
+    memory_limit: 2Gi
+    env:
+      - name: PYTHONUNBUFFERED
+        value: "1"
+      - name: DISABLE_THINKING
+        value: "true"
+      - name: MCP_SANDBOX_URL
+        value: "http://mcp-code-sandbox.mcp-servers.svc:3005"
+      - name: SANDBOX_CONCURRENCY
+        value: "10"
+      - name: MLFLOW_DIRECT_URI
+        value: "https://mlflow.redhat-ods-applications.svc:8443"
+      - name: MLFLOW_TRACKING_INSECURE_TLS
+        value: "true"
+
+benchmarks:
+  - id: humaneval_plus
+    name: HumanEval+
+    description: >
+      HumanEval+ — 164 Python function-completion problems with 80x more
+      test cases than original HumanEval. Measures greedy pass@1.
+    category: coding
+    metrics: [humaneval_plus_pass1]
+    num_few_shot: 0
+    tags: [coding, python, pass@1, function-completion]
+    primary_score:
+      metric: humaneval_plus_pass1
+      lower_is_better: false
+      pass_criteria:
+        threshold: 0.0
+
+  - id: mbpp_plus
+    name: MBPP+
+    description: >
+      MBPP+ — 399 Python programming problems with 35x more test cases
+      than original MBPP. Measures greedy pass@1.
+    category: coding
+    metrics: [mbpp_plus_pass1]
+    num_few_shot: 0
+    tags: [coding, python, pass@1, problem-solving]
+    primary_score:
+      metric: mbpp_plus_pass1
+      lower_is_better: false
+      pass_criteria:
+        threshold: 0.0

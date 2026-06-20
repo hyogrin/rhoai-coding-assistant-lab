@@ -8,7 +8,7 @@ from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
 from app.config import APP_NAME, APP_VERSION
 from app.database import init_db, SessionLocal
 from app.models import MenuItem, Customer, MenuCategory
-from app.routes import menu, orders, customers
+from app.routes import menu, orders, customers, recommend
 from app.middleware import MetricsMiddleware
 
 
@@ -22,12 +22,14 @@ def _setup_tracing():
     from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
     from opentelemetry.sdk.resources import Resource
     from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+    from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
 
     resource = Resource.create({"service.name": "cafe-order-system", "service.version": APP_VERSION})
     provider = TracerProvider(resource=resource)
     exporter = OTLPSpanExporter(endpoint=otel_endpoint, insecure=True)
     provider.add_span_processor(BatchSpanProcessor(exporter))
     trace.set_tracer_provider(provider)
+    HTTPXClientInstrumentor().instrument()
     return FastAPIInstrumentor
 
 
@@ -43,11 +45,12 @@ app.add_middleware(MetricsMiddleware)
 
 _instrumentor = _setup_tracing()
 if _instrumentor:
-    _instrumentor.instrument_app(app)
+    _instrumentor.instrument_app(app, excluded_urls="health,metrics")
 
 app.include_router(menu.router)
 app.include_router(orders.router)
 app.include_router(customers.router)
+app.include_router(recommend.router)
 
 
 @app.get("/health")
