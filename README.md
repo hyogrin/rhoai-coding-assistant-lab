@@ -48,7 +48,8 @@ flowchart TB
 | **2** | `2_basic_run/` | Run coding assistant | Public vs air-gapped comparison |
 | **3** | `3_maas/` | MaaS gateway | Unified auth & API key management |
 | **4** | `4_control/` | Centralized control | Rate limiting & policy enforcement |
-| **5** | `5_benchmarks/` | Performance validation | Capacity planning with real metrics |
+| **5** | `5_benchmarks/` | Coding evaluation | HumanEval+ & MBPP+ pass@1 via EvalHub |
+| **6** | `6_monitoring/` | Observability | Metrics, dashboards & distributed tracing |
 
 > Together: models provide the **"brain"** (inference), MCP tools provide the **"hands"** (actions), MaaS provides **"governance"** (auth, rate limiting, API keys), and AI Skills provide **"knowledge"** (domain-specific instructions).
 
@@ -56,10 +57,11 @@ flowchart TB
 
 | Model | Use Case | GPU | MaaS | Deployment |
 |-------|----------|-----|:----:|------------|
+| Qwen3.6-27B (FP8) | Coding, reasoning, tool calling | 1x L40S/A100 | Yes | InferenceService (S3/PVC) |
 | Qwen3-14B (FP8) | Coding, reasoning, tool calling | 1x A100/L40S | Yes | LLMInferenceService (OCI modelcar) |
 | Qwen3-4B | Lightweight coding tasks | 1x L4/A10G | Yes | LLMInferenceService (OCI modelcar) |
 
-> Models are deployed via `LLMInferenceService` (llm-d) using OCI modelcar images from `quay.io/redhat-ai-services/modelcar-catalog`.
+> Models are deployed via `LLMInferenceService` (llm-d) or `InferenceService` using OCI modelcar images from `quay.io/redhat-ai-services/modelcar-catalog` or S3/PVC storage.
 
 ## MCP Servers
 
@@ -104,11 +106,16 @@ flowchart TB
 * `4_control/1_maas_advanced.ipynb` — Multi-tier demo (Free 500 tok/min vs Premium 50K tok/min), API key lifecycle, Prometheus observability
 * `4_control/2_maas_policy_test.ipynb` — Rate limit trigger (429), recovery after window reset, policy enforcement
 
-### Phase 5 — Benchmarks
+### Phase 5 — Coding Evaluation
 
-* `5_benchmarks/1_benchmarks_overview.md` — GuideLLM methodology, key metrics (TTFT, ITL, tok/s)
-* `5_benchmarks/2_run_benchmarks.ipynb` — Run benchmarks via EvalHub SDK
+* `5_benchmarks/1_benchmarks_overview.md` — Coding evaluation methodology (HumanEval+, MBPP+ pass@1)
+* `5_benchmarks/2_run_benchmarks.ipynb` — Run coding benchmarks via EvalHub SDK, track in MLflow
 * `5_benchmarks/3_capacity_planning.ipynb` — Translate results into team capacity projections
+
+### Phase 6 — Observability
+
+* `6_monitoring/1_monitoring_overview.md` — Observability stack architecture (metrics, tracing, dashboards)
+* `6_monitoring/1_observability_setup.ipynb` — Deploy ServiceMonitor, PodMonitor, Tempo, OTel Collector, Grafana
 
 ## Prerequisites
 

@@ -20,12 +20,15 @@ data:
       - name: Tempo
         type: tempo
         access: proxy
-        url: http://tempo-lab.monitoring.svc.cluster.local:3200
+        url: http://tempo-lab-gateway.monitoring.svc.cluster.local:3200
         jsonData:
+          httpHeaderName1: X-Scope-OrgID
           tracesToMetrics:
             datasourceUid: prometheus
           nodeGraph:
             enabled: true
+        secureJsonData:
+          httpHeaderValue1: "dev"
 ---
 apiVersion: v1
 kind: ConfigMap

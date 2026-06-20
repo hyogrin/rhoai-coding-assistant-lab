@@ -64,7 +64,7 @@ Then run `3_maas/2_enable_maas.ipynb` — it will skip installation and use your
 
 ## RHOAI Model Requirements
 
-Models are served via **LLMInferenceService (llm-d)** on OpenShift AI with OCI modelcar images. This enables automatic MaaS Gateway registration, API key management, and rate limiting.
+Models are served via **LLMInferenceService (llm-d)** or **InferenceService** on OpenShift AI. LLMInferenceService enables automatic MaaS Gateway registration, API key management, and rate limiting.
 
 ### Default (MaaS-compatible via llm-d)
 
@@ -76,12 +76,13 @@ Models are served via **LLMInferenceService (llm-d)** on OpenShift AI with OCI m
 
 > **Tip:** Qwen3-14B is the recommended default — dense FP8 architecture with native reasoning and tool-calling, deployed via `LLMInferenceService` with OCI modelcar for fast startup (no runtime downloads).
 
-### Advanced (Larger Models — limited MaaS support)
+### Advanced (Larger Models)
 
-| Model | Parameters | Min GPU | VRAM | MaaS |
-|-------|-----------|---------|------|:----:|
-| Qwen3-Coder-30B-A3B (MoE) | 30B/3B active | 1x L40S | ~24GB | Verify |
-| Qwen3.6-35B-A3B (MoE) | 35B/3B active | 1x L40S | ~21GB | No |
+| Model | Parameters | Min GPU | VRAM | Deployment | MaaS |
+|-------|-----------|---------|------|------------|:----:|
+| Qwen3.6-27B (FP8) | 27B | 1x L40S/A100 | ~27GB | InferenceService (S3/PVC) | Verify |
+| Qwen3-Coder-30B-A3B (MoE) | 30B/3B active | 1x L40S | ~24GB | LLMInferenceService | Verify |
+| Qwen3.6-35B-A3B (MoE) | 35B/3B active | 1x L40S | ~21GB | InferenceService | No |
 
 > **Note:** MaaS integration requires `LLMInferenceService` (llm-d). Standard `InferenceService` deployments are NOT visible to the MaaS gateway. Qwen3.6 MoE models require upstream vLLM and are not compatible with llm-d.
 
