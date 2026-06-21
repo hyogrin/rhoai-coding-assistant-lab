@@ -34,7 +34,7 @@
       "gridPos": { "h": 8, "w": 8, "x": 16, "y": 0 },
       "targets": [
         {
-          "expr": "vllm:avg_generation_throughput_toks_per_s{namespace=\"demo\"}",
+          "expr": "sum(rate(vllm:generation_tokens_total{namespace=\"demo\"}[1m])) by (model_name)",
           "legendFormat": "{{model_name}}"
         }
       ],
@@ -70,11 +70,11 @@
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
       "targets": [
         {
-          "expr": "histogram_quantile(0.50, sum(rate(vllm:time_per_output_token_seconds_bucket{namespace=\"demo\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.50, sum(rate(vllm:inter_token_latency_seconds_bucket{namespace=\"demo\"}[5m])) by (le))",
           "legendFormat": "p50"
         },
         {
-          "expr": "histogram_quantile(0.95, sum(rate(vllm:time_per_output_token_seconds_bucket{namespace=\"demo\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.95, sum(rate(vllm:inter_token_latency_seconds_bucket{namespace=\"demo\"}[5m])) by (le))",
           "legendFormat": "p95"
         }
       ],

@@ -35,7 +35,7 @@
 
 ## MaaS (Models as a Service) Prerequisites
 
-MaaS requires PostgreSQL for API key lifecycle management. The setup is **automated by the notebook** (`3_maas/2_enable_maas.ipynb`).
+MaaS requires PostgreSQL for API key lifecycle management. The setup is **automated by the notebook** (`2_maas/2_enable_maas.ipynb`).
 
 ### How it works
 
@@ -58,7 +58,7 @@ Set this in your `.env` file:
 MAAS_DB_CONNECTION_URL=postgresql://USERNAME:PASSWORD@HOSTNAME:5432/DATABASE?sslmode=require
 ```
 
-Then run `3_maas/2_enable_maas.ipynb` — it will skip installation and use your DB.
+Then run `2_maas/2_enable_maas.ipynb` — it will skip installation and use your DB.
 
 > **Reference:** [MaaS Setup Guide](https://github.com/opendatahub-io/models-as-a-service/blob/main/docs/content/install/maas-setup.md)
 

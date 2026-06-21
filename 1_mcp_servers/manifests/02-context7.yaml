@@ -41,25 +41,29 @@ spec:
               path: /health
               port: 3001
             initialDelaySeconds: 10
-            periodSeconds: 5
-            failureThreshold: 24
+            periodSeconds: 10
+            timeoutSeconds: 60
+            failureThreshold: 30
           livenessProbe:
             httpGet:
               path: /health
               port: 3001
-            periodSeconds: 30
+            periodSeconds: 60
+            timeoutSeconds: 60
+            failureThreshold: 15
           readinessProbe:
             httpGet:
               path: /health
               port: 3001
             periodSeconds: 10
+            timeoutSeconds: 30
           resources:
             requests:
               cpu: 100m
-              memory: 256Mi
+              memory: 512Mi
             limits:
               cpu: 500m
-              memory: 768Mi
+              memory: 1536Mi
 ---
 apiVersion: v1
 kind: Service

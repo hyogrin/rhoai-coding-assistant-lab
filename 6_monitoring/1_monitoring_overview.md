@@ -265,7 +265,7 @@ Developer Request
     ▼
 ┌──────────────────────────────┐
 │  MaaS Gateway (API layer)    │  ← Auth + Rate Limiting for model & MCP access
-│  Gateway API + Authorino     │     Module: 3_maas/, 4_control/
+│  Gateway API + Authorino     │     Module: 2_maas/, 4_control/
 │  + Limitador                 │
 └──────────┬───────────────────┘
            │  routes to

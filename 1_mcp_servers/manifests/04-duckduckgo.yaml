@@ -41,18 +41,22 @@ spec:
               path: /health
               port: 3002
             initialDelaySeconds: 10
-            periodSeconds: 5
-            failureThreshold: 24
+            periodSeconds: 10
+            timeoutSeconds: 60
+            failureThreshold: 30
           livenessProbe:
             httpGet:
               path: /health
               port: 3002
-            periodSeconds: 30
+            periodSeconds: 60
+            timeoutSeconds: 60
+            failureThreshold: 15
           readinessProbe:
             httpGet:
               path: /health
               port: 3002
             periodSeconds: 10
+            timeoutSeconds: 30
           resources:
             requests:
               cpu: 100m
