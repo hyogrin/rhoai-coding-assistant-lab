@@ -1,6 +1,6 @@
 # RHOAI Code Assistant Lab
 
-A hands-on workshop for building a **centralized coding assistant infrastructure** on **Red Hat OpenShift AI (RHOAI)**. Deploy shared MCP tool servers, enable **Models as a Service (MaaS)** for managed model access, and validate end-to-end with benchmarks — no external LLM API keys required.
+A hands-on workshop for building a **centralized coding assistant infrastructure** on **Red Hat OpenShift AI (RHOAI)**. Deploy shared MCP tool servers, enable **Models as a Service (MaaS)** for managed model access, and validate end-to-end with benchmarks — no external LLM API keys required. This workshop demonstrates how to build a fully self-contained, enterprise-grade coding assistant infrastructure on Red Hat OpenShift AI — from model serving through tool integration to performance validation — without dependency on external AI API providers.
 
 ## Architecture
 
@@ -150,10 +150,6 @@ This lab uses AI skills from **[hyo-rhoai-skills](https://github.com/hyogrin/hyo
 | `/hf-model-deploy` | Stable model weight acquisition (OCI ModelCar, S3, PVC) |
 | `/debug-inference` | Troubleshoot failed InferenceService deployments |
 
-## Related Projects
-
-* [Private AI Coding Assistant](https://github.com/manujoy7/Private_AI_Coding_Assistant) — Production reference architecture for private AI code assistants on ROSA HCP and ARO.
-
 ## Model Serving Examples
 
 The lab default is `qwen36-27b`. Other models can be selected via `DEPLOY_MODEL` in `.env`.
@@ -194,6 +190,6 @@ giving you centralized API key management, token-based rate limiting, and auth p
 | Codebase Search | Local AI | Yes | `search_code`, `get_file`, `list_files` |
 | Repo Docs | Local AI | Yes | `search_docs`, `list_docs` |
 
-## About
+## Related Projects
 
-This workshop demonstrates how to build a fully self-contained, enterprise-grade coding assistant infrastructure on Red Hat OpenShift AI — from model serving through tool integration to performance validation — without dependency on external AI API providers.
+* [Private AI Coding Assistant](https://github.com/manujoy7/Private_AI_Coding_Assistant) — Production reference architecture for private AI code assistants on ROSA HCP and ARO.
