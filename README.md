@@ -16,7 +16,7 @@ flowchart LR
 
     subgraph OCP["Red Hat OpenShift"]
         direction LR
-        subgraph GW["MaaS Gateway"]
+        subgraph GW["MaaS Gateway (Red Hat Connectivity Link)"]
             direction TB
             Auth["Authorino (Auth)"]
             Limit["Limitador (Rate Limit)"]
