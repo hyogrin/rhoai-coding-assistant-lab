@@ -54,6 +54,9 @@ flowchart LR
 
 > Together: models provide the **"brain"** (inference), MCP tools provide the **"hands"** (actions), MaaS provides **"governance"** (auth, rate limiting, API keys), and AI Skills provide **"knowledge"** (domain-specific instructions).
 
+
+![HighLight](images/highlight1.png)
+
 ## What's Included
 
 ### Phase 0 — Setup
