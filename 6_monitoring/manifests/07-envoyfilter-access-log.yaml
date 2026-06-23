@@ -1,0 +1,41 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  name: maas-gateway-access-log
+  namespace: openshift-ingress
+spec:
+  workloadSelector:
+    labels:
+      gateway.networking.k8s.io/gateway-name: maas-default-gateway
+  configPatches:
+    - applyTo: NETWORK_FILTER
+      match:
+        context: GATEWAY
+        listener:
+          filterChain:
+            filter:
+              name: envoy.filters.network.http_connection_manager
+      patch:
+        operation: MERGE
+        value:
+          typed_config:
+            "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+            access_log:
+              - name: envoy.access_loggers.stdout
+                typed_config:
+                  "@type": type.googleapis.com/envoy.extensions.access_loggers.stream.v3.StdoutAccessLog
+                  log_format:
+                    json_format:
+                      timestamp: "%START_TIME%"
+                      method: "%REQ(:METHOD)%"
+                      path: "%REQ(:PATH)%"
+                      protocol: "%PROTOCOL%"
+                      response_code: "%RESPONSE_CODE%"
+                      response_flags: "%RESPONSE_FLAGS%"
+                      duration_ms: "%DURATION%"
+                      upstream_host: "%UPSTREAM_HOST%"
+                      user_agent: "%REQ(USER-AGENT)%"
+                      maas_subscription: "%REQ(X-MAAS-SUBSCRIPTION)%"
+                      request_id: "%REQ(X-REQUEST-ID)%"
+                      bytes_sent: "%BYTES_SENT%"
+                      bytes_received: "%BYTES_RECEIVED%"

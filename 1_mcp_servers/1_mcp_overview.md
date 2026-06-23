@@ -17,7 +17,7 @@ Not every tool needs MCP. We follow a pragmatic approach:
 > **Why we keep MCP servers minimal:**
 > - Each MCP server consumes context tokens for tool definitions — fewer servers = more room for actual work
 > - `gh` CLI is already well-known to LLMs (no GitHub MCP needed)
-> - Sequential thinking is built into modern agent modes (Cursor, Claude Code)
+> - Sequential thinking is built into modern agent modes (Cursor, Claude Code, OpenCode)
 > - We focus on tools that **cannot** be replicated via CLI
 
 ## Protocol Architecture

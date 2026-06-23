@@ -95,7 +95,9 @@ At least one of:
 | VS Code (Agent Mode) | Built-in (v1.100+) | `.vscode/mcp.json` |
 | Cursor | Built-in | `.cursor/mcp.json` |
 | Claude Code | Built-in | `~/.claude/mcp.json` |
-| OpenCode | Built-in | `~/.config/opencode/config.json` |
+| OpenCode | Built-in | `opencode.json` (project root) |
+
+> **OpenCode install:** `curl -fsSL https://opencode.ai/install | bash` — open-source, model-neutral (75+ providers). See [Red Hat Developer article](https://developers.redhat.com/articles/2026/04/22/opencode-model-neutral-ai-coding-assistant-openshift-dev-spaces) for OpenShift Dev Spaces integration.
 
 ## Network Requirements
 

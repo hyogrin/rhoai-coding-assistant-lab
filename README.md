@@ -11,7 +11,8 @@ flowchart LR
         Cursor[Cursor]
         VSCode[VS Code]
         ClaudeCode[Claude Code]
-        Cursor ~~~ VSCode ~~~ ClaudeCode
+        OpenCode[OpenCode]
+        Cursor ~~~ VSCode ~~~ ClaudeCode ~~~ OpenCode
     end
 
     subgraph OCP["Red Hat OpenShift"]
@@ -138,12 +139,12 @@ uv sync
 4. Install AI skills (optional):
 ```bash
 lola mod add https://github.com/hyogrin/hyo-rhoai-skills.git
-lola install hyo-rhoai-skills -a cursor
+lola install hyo-rhoai-skills -a cursor    # or: -a opencode
 ```
 
 5. Follow phases 0-6 in order.
 
-## AI Skills (Cursor / Claude Code)
+## AI Skills (Cursor / Claude Code / OpenCode)
 
 This lab uses AI skills from **[hyo-rhoai-skills](https://github.com/hyogrin/hyo-rhoai-skills)** — production-ready skills for RHOAI model deployment and operations.
 

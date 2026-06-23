@@ -313,3 +313,72 @@ Developer Request
 > **Tip:** When someone says "the gateway" in an OpenShift AI context, they almost always
 > mean the **MaaS Gateway**. The Tempo Gateway only comes up when configuring tracing,
 > and the KServe/Istio gateway is rarely discussed directly because the operator manages it.
+
+---
+
+## Envoy Access Log (Per-Request Audit)
+
+The MaaS Gateway runs on Envoy (via Istio/Gateway API). By default, access logs are disabled.
+An `EnvoyFilter` CR enables structured JSON access logging with `X-MaaS-Subscription` headers.
+
+### What Gets Logged
+
+| Field | Source | Purpose |
+|-------|--------|---------|
+| `maas_subscription` | `X-MaaS-Subscription` header (set by Authorino) | Identifies the subscription |
+| `path` | Request URL | Model or MCP endpoint |
+| `response_code` | Envoy | Success/failure tracking |
+| `duration_ms` | Envoy response timing | Latency audit |
+| `request_id` | `X-Request-ID` header | Cross-service correlation |
+| `bytes_sent` / `bytes_received` | Envoy | Token usage proxy |
+
+### Per-User Correlation
+
+The MaaS controller manages the AuthPolicy and currently exposes only `X-MaaS-Subscription`
+as a request header. To correlate subscription → user → API key:
+
+1. Access log identifies the **subscription** per request
+2. MaaS API (`/maas-api/v1beta1/api-keys`) maps API keys → users → subscriptions
+3. Limitador tracks token usage per subscription for rate limiting
+
+### Log Persistence
+
+Access logs are written to the gateway pod's stdout (`oc logs`). For production:
+- **OpenShift Logging** (Loki + ClusterLogForwarder) for cluster-native aggregation
+- **External SIEM** via fluentd/fluentbit sidecar or log forwarder
+
+---
+
+## MaaS Usage Metering (Limitador + Authorino)
+
+Beyond per-request access logs, MaaS provides **aggregate usage metrics** through Limitador and Authorino.
+These are exposed as Prometheus metrics and visualized in the **MaaS Usage Grafana Dashboard**.
+
+### Metrics
+
+| Metric | Source | What It Tracks |
+|--------|--------|----------------|
+| `authorized_calls` | Limitador | Successful requests within rate limit |
+| `authorized_hits` | Limitador | Tokens consumed (per subscription) |
+| `limited_calls` | Limitador | Rejected requests — HTTP 429 |
+| `limitador_up` | Limitador | Rate limiter health |
+| `auth_server_evaluations_total` | Authorino | Auth evaluation count (success/failure) |
+
+### Per-User Tracking Flow
+
+```
+Grafana Dashboard              MaaS API                    Identity
+(subscription-level)           (key-level)                 (user-level)
+        │                           │                           │
+  authorized_hits            /maas-api/v1/               username, groups,
+  by limitador_namespace      api-keys/search             keyId, lastUsed
+```
+
+1. **Dashboard** — identify which subscription consumed the most tokens
+2. **MaaS API** — query `/maas-api/v1/api-keys/search` for keys bound to that subscription
+3. **API Key metadata** — each key has `username`, `keyId`, `lastUsed` fields
+
+### Setup
+
+See `2_maas_usage_dashboard.ipynb` for deploying the Grafana dashboard.
+Raw PromQL queries are also demonstrated in `../4_control/1_maas_advanced.ipynb` Section 4.

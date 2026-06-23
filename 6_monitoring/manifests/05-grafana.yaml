@@ -51,6 +51,8 @@ spec:
               mountPath: /var/lib/grafana/dashboards/gpu
             - name: dashboard-llm
               mountPath: /var/lib/grafana/dashboards/llm
+            - name: dashboard-maas
+              mountPath: /var/lib/grafana/dashboards/maas
             - name: grafana-storage
               mountPath: /var/lib/grafana
               subPath: data
@@ -70,6 +72,9 @@ spec:
         - name: dashboard-llm
           configMap:
             name: grafana-dashboard-llm
+        - name: dashboard-maas
+          configMap:
+            name: grafana-dashboard-maas
         - name: grafana-storage
           emptyDir: {}
 ---
