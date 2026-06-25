@@ -41,6 +41,21 @@ flowchart LR
     GW -->|"MCP Protocol"| Tools
 ```
 
+## Scope & Security Notes
+
+This lab is designed for **hands-on learning**, not production deployment. Several security simplifications are made intentionally:
+
+| Area | Lab Approach | Production Recommendation |
+|------|-------------|--------------------------|
+| Ingress TLS | OpenShift default self-signed cert (`NODE_TLS_REJECT_UNAUTHORIZED=0` on clients) | Let's Encrypt or enterprise CA via cert-manager |
+| Internal DB connection | `sslmode=disable` (plaintext within cluster network) | TLS with custom PKI (e.g., CNPG + cert-manager) |
+| Internal service auth | OpenShift service-serving CA (auto-trusted) | Custom CA with `user-ca-bundle` in Proxy for end-to-end encryption |
+| API key storage | `.env` file (local only, gitignored) | Vault, Sealed Secrets, or external secret management |
+| Distributed serving | Not installed (single-GPU models only) | Leader Worker Set (LWS) for multi-node tensor-parallel |
+| MaaS Gateway | Operator-managed defaults (auto-created by DSC `modelsAsService: Managed`) | Manual override (`opendatahub.io/managed: 'false'`) for custom TLS, hostname, Envoy resource tuning, and GitOps compatibility |
+
+> For a production-grade reference with trusted TLS, custom PKI, end-to-end encryption, and manual Gateway control, see [maas-from-scratch](https://github.com/jharmison-redhat/maas-from-scratch).
+
 ## Lab Flow
 
 | Phase | Folder | Focus | Key Outcome |
