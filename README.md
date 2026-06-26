@@ -31,7 +31,7 @@ flowchart LR
         subgraph Tools["MCP Servers"]
             direction TB
             C7[Context7] ~~~ Search[Codebase Search] 
-            DDG[DuckDuckGo] ~~~ Docs[Repo Docs]
+            SXG[SearXNG] ~~~ Docs[Repo Docs]
             Sandbox[Code Sandbox]
         end
     end
@@ -84,7 +84,7 @@ This lab is designed for **hands-on learning**, not production deployment. Sever
 ### Phase 1 — MCP Servers
 
 * `1_mcp_servers/1_mcp_overview.md` — MCP protocol, server types, deployment strategy
-* `1_mcp_servers/2_deploy_mcp_servers.ipynb` — Deploy 5 MCP servers (Context7, DuckDuckGo, Code Sandbox, Codebase Search, Repo Docs)
+* `1_mcp_servers/2_deploy_mcp_servers.ipynb` — Deploy 5 MCP servers (Context7, SearXNG, Code Sandbox, Codebase Search, Repo Docs)
 * `1_mcp_servers/3_integrate_mcp_catalog.ipynb` — Register with MCP Gateway & RHOAI Catalog (MCPServerRegistration, tool aggregation)
 * `1_mcp_servers/4_connect_ide_clients.ipynb` — Configure IDEs to connect via Routes
 
@@ -98,7 +98,8 @@ This lab is designed for **hands-on learning**, not production deployment. Sever
 ### Phase 3 — Run the Coding Assistant
 
 * `3_basic_run/1_ide_model_config.ipynb` — Configure IDE model endpoints (self-hosted + MaaS Gateway)
-* `3_basic_run/2_run_public_coding_assistant.ipynb` — **Public network**: all 5 MCP tools active (Context7 + DuckDuckGo + local tools)
+* `3_basic_run/2_run_public_coding_assistant.ipynb` — **Public network**: all 5 MCP tools active (Context7 + SearXNG + local tools)
+* `0_setup/apps/cafe-order-system/AGENTS.md` — **Agent harness**: project-level instructions that create a plan-execute-verify inner loop
 * `3_basic_run/3_run_closed_coding_assistant.ipynb` — **Air-gapped**: 3 local tools only (Codebase Search + Repo Docs + Code Sandbox)
 
 ### Phase 4 — Centralized Control
@@ -204,7 +205,7 @@ giving you centralized API key management, token-based rate limiting, and auth p
 | Server | Type | Air-gapped | Key Tools |
 |--------|------|:----------:|-----------|
 | Context7 | External API | No | `resolve-library-id`, `get-library-docs` |
-| DuckDuckGo | External API | No | `search` |
+| SearXNG | External API | No | `search` |
 | Code Sandbox | Local | Yes | `execute_code`, `read_file`, `write_file` |
 | Codebase Search | Local AI | Yes | `search_code`, `get_file`, `list_files` |
 | Repo Docs | Local AI | Yes | `search_docs`, `list_docs` |

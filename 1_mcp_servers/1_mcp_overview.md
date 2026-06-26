@@ -50,7 +50,7 @@ sequenceDiagram
 | Server | Purpose | Air-gapped | External Dependency | Transport |
 |--------|---------|:----------:|---------------------|-----------|
 | **Context7** | Library documentation lookup | No | mcp.context7.com (HTTP) | supergateway → Streamable HTTP |
-| **DuckDuckGo** | Web search & content fetching | No | duckduckgo.com (HTTP) | supergateway → Streamable HTTP |
+| **SearXNG** | Web search & content fetching | No | Self-hosted meta-engine | supergateway → Streamable HTTP |
 | **Code Sandbox** | Secure Python/Bash/Node execution | Yes | None (local) | Native Streamable HTTP |
 | **Codebase Search** | Semantic code search (internal) | Yes | None (local embeddings) | supergateway → Streamable HTTP |
 | **Repo Docs** | Internal documentation Q&A | Yes | None (local embeddings) | supergateway → Streamable HTTP |
@@ -62,7 +62,7 @@ sequenceDiagram
 │  PUBLIC                     │  AIR-GAPPED           │
 ├─────────────────────────────┼───────────────────────┤
 │  Context7        ✅         │           ❌           │
-│  DuckDuckGo      ✅         │           ❌           │
+│  SearXNG         ✅         │           ❌           │
 │  Code Sandbox    ✅         │  Code Sandbox    ✅    │
 │  Codebase Search ✅         │  Codebase Search ✅    │
 │  Repo Docs       ✅         │  Repo Docs       ✅    │
@@ -86,7 +86,7 @@ These servers demonstrate **enterprise RAG** over internal codebases and documen
 flowchart TD
     subgraph ns [mcp-servers namespace]
         CTX[Context7 Pod]
-        DDG[DuckDuckGo Pod]
+        SXG[SearXNG Pod]
         CS[Code Sandbox Pod]
         CBS[Codebase Search Pod]
         RD[Repo Docs Pod]
@@ -101,7 +101,7 @@ flowchart TD
     DOCS -->|mount /data/docs| RD
 
     CTX --> R1[Route: mcp-context7]
-    DDG --> R2[Route: mcp-duckduckgo]
+    SXG --> R2[Route: mcp-searxng]
     CS --> R3[Route: mcp-code-sandbox]
     CBS --> R4[Route: mcp-codebase-search]
     RD --> R5[Route: mcp-repo-docs]

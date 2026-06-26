@@ -61,7 +61,7 @@ flowchart TB
 
     subgraph "MCP Servers (Streamable HTTP)"
         MCP1[Context7 - Library Docs]
-        MCP2[DuckDuckGo - Web Search]
+        MCP2[SearXNG - Web Search]
         MCP3[Code Sandbox - Execution]
         MCP4[Codebase Search - Code RAG]
         MCP5[Repo Docs - Doc Q&A]

@@ -1,0 +1,98 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mcp-searxng
+  namespace: mcp-servers
+  labels:
+    app: mcp-searxng
+    app.kubernetes.io/part-of: code-assistant-lab
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mcp-searxng
+  template:
+    metadata:
+      labels:
+        app: mcp-searxng
+    spec:
+      initContainers:
+        - name: copy-config
+          image: dandehoon/searxng-mcp:latest
+          command: ["sh", "-c", "cp -a /etc/searxng/. /config/"]
+          volumeMounts:
+            - name: searxng-config
+              mountPath: /config
+      containers:
+        - name: searxng
+          image: dandehoon/searxng-mcp:latest
+          env:
+            - name: SEARXNG_MCP_TRANSPORT
+              value: "http"
+            - name: SEARXNG_MCP_PATH
+              value: "/mcp"
+            - name: SEARXNG_MCP_MAX_RESULTS
+              value: "10"
+            - name: SEARXNG_LANGUAGE
+              value: "en"
+          ports:
+            - containerPort: 8000
+              protocol: TCP
+          volumeMounts:
+            - name: searxng-config
+              mountPath: /etc/searxng
+          startupProbe:
+            tcpSocket:
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            failureThreshold: 18
+          livenessProbe:
+            tcpSocket:
+              port: 8000
+            periodSeconds: 60
+            failureThreshold: 5
+          readinessProbe:
+            tcpSocket:
+              port: 8000
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+      volumes:
+        - name: searxng-config
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mcp-searxng
+  namespace: mcp-servers
+  labels:
+    app: mcp-searxng
+spec:
+  selector:
+    app: mcp-searxng
+  ports:
+    - port: 8000
+      targetPort: 8000
+      protocol: TCP
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: mcp-searxng
+  namespace: mcp-servers
+spec:
+  to:
+    kind: Service
+    name: mcp-searxng
+  port:
+    targetPort: 8000
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
