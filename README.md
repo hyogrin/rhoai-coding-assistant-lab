@@ -99,7 +99,8 @@ This lab is designed for **hands-on learning**, not production deployment. Sever
 
 * `3_basic_run/1_ide_model_config.ipynb` — Configure IDE model endpoints (self-hosted + MaaS Gateway)
 * `3_basic_run/2_run_public_coding_assistant.ipynb` — **Public network**: all 5 MCP tools active (Context7 + SearXNG + local tools)
-* `0_setup/apps/cafe-order-system/AGENTS.md` — **Agent harness**: project-level instructions that create a plan-execute-verify inner loop
+* `0_setup/apps/cafe-order-system/AGENTS.md` — **Agent harness**: project-level instructions that create a plan-execute-verify inner loop.
+  An `AGENTS.md` file gives the AI agent project-specific rules (architecture, conventions, verification steps) so it follows a **Plan → Execute → Verify** cycle instead of generating generic code. The notebook compares agent output with and without this harness.
 * `3_basic_run/3_run_closed_coding_assistant.ipynb` — **Air-gapped**: 3 local tools only (Codebase Search + Repo Docs + Code Sandbox)
 
 ### Phase 4 — Centralized Control
