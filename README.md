@@ -60,9 +60,9 @@ This lab is designed for **hands-on learning**, not production deployment. Sever
 
 | Phase | Folder | Focus | Key Outcome |
 |-------|--------|-------|-------------|
-| **0** | `0_setup/` | Environment & models | Models deployed, demo app ready |
+| **0** | `0_setup/` | Environment, MaaS infra & models | MaaS gateway running, models deployed, demo app ready |
 | **1** | `1_mcp_servers/` | MCP tool servers | 5 MCP servers accessible via Routes |
-| **2** | `2_maas/` | MaaS gateway | Unified auth & API key management |
+| **2** | `2_maas/` | MaaS registration & access | Model registration, API keys, MCP gateway routes |
 | **3** | `3_basic_run/` | Run coding assistant | Public vs air-gapped comparison |
 | **4** | `4_control/` | Centralized control | Rate limiting & policy enforcement |
 | **5** | `5_benchmarks/` | Coding evaluation | HumanEval+ & MBPP+ pass@1 via EvalHub |
@@ -78,7 +78,7 @@ This lab is designed for **hands-on learning**, not production deployment. Sever
 ### Phase 0 — Setup
 
 * `0_setup/0_prerequisites.md` — Required access, tools, environment preparation
-* `0_setup/1_environment_setup.ipynb` — Verify cluster, deploy models on RHOAI
+* `0_setup/1_environment_setup.ipynb` — Verify cluster, install MaaS infrastructure, deploy models on RHOAI
 * `0_setup/2_app_setup.ipynb` — Deploy the `cafe-order-system` demo app (target for MCP servers)
 
 ### Phase 1 — MCP Servers
@@ -91,7 +91,7 @@ This lab is designed for **hands-on learning**, not production deployment. Sever
 ### Phase 2 — MaaS Gateway
 
 * `2_maas/1_maas_overview.md` — MaaS architecture, prerequisites (RHCL, MetalLB), CRD reference
-* `2_maas/2_enable_maas.ipynb` — Verify platform, register model (MaaSModelRef), create policies + API keys, register MCP servers
+* `2_maas/2_enable_maas.ipynb` — Register model (MaaSModelRef), create policies + API keys, register MCP servers via gateway
 * `2_maas/3_test_model_serving.ipynb` — Inference, streaming, auth enforcement (401/403 verification)
 * `2_maas/4_test_mcp_servers.ipynb` — MCP protocol tests through gateway, direct vs gateway comparison
 

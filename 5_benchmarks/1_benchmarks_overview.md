@@ -70,7 +70,7 @@ The coding eval adapter does **not** execute generated code internally. Instead,
 | Component | Purpose |
 |-----------|---------|
 | Phases 0–1 completed | Cluster access, model deployed, mcp-code-sandbox deployed |
-| EvalHub deployed (`demo` ns) | Orchestrates adapter jobs and tracks results in MLflow |
+| EvalHub deployed (`demo` ns) | Deploy via `0_setup/1_environment_setup.ipynb` Section 9 (TrustyAI + EvalHub CR) |
 | mcp-code-sandbox deployed (`mcp-servers` ns) | Sandboxed code execution for coding benchmarks |
 | EvalHub SA RBAC | `evalhub-service` SA needs configmaps/pods permissions in target namespace |
 | API key or OCP token | Authenticate to EvalHub endpoints |
