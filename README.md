@@ -130,11 +130,13 @@ This lab is designed for **hands-on learning**, not production deployment. Sever
 | PostgreSQL | 14+ | Required by MaaS for API key management |
 | MetalLB Operator | — | External IP for Gateway — **bare-metal only** |
 | NVIDIA GPU Operator | — | GPU support for model inference |
-| `oc` CLI | 4.14+ | Cluster management |
+| `oc` CLI | 4.14+ | Cluster management (auto-installed in Workbench) |
 | Python | 3.11+ | Jupyter notebooks |
-| `uv` | 0.4+ | Python package manager (`uv sync` to install dependencies) |
+| `uv` | 0.4+ | Python package manager — local only (`pip` used in Workbench) |
 
 ## Quick Start
+
+### Option A: Local Machine
 
 1. Clone this repo:
 ```bash
@@ -160,6 +162,28 @@ lola install hyo-rhoai-skills -a cursor    # or: -a opencode
 ```
 
 5. Follow phases 0-6 in order.
+
+### Option B: RHOAI Workbench
+
+Requires an admin-group user account with cluster-admin privileges.
+
+1. Create a Data Science Project in the RHOAI Dashboard
+2. Launch a Jupyter Workbench (Standard Data Science image)
+3. Open terminal and clone the repo:
+```bash
+git clone https://github.com/hyogrin/rhoai-code-assistant-lab.git
+cd rhoai-code-assistant-lab
+cp sample.env .env
+```
+
+4. Log in with your user credentials in the Workbench terminal:
+```bash
+oc login -u <username> https://api.<cluster>:6443
+```
+
+5. Open `0_setup/1_environment_setup.ipynb` and run all cells — the bootstrap cell auto-installs `oc` CLI and Python dependencies.
+
+> See `0_setup/0_prerequisites.md` for detailed Workbench setup instructions.
 
 ## AI Skills (Cursor / Claude Code / OpenCode)
 

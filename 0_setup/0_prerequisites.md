@@ -107,6 +107,47 @@ Developer workstations need HTTPS access to:
 
 The MCP servers and MaaS on OpenShift handle external API calls — developers only need access to the cluster Routes.
 
+## Running in RHOAI Workbench
+
+You can run this lab directly from an **RHOAI Workbench** instead of a local machine. This requires an admin-group user account with cluster-admin privileges.
+
+### Setup Steps
+
+1. **Create a Data Science Project** in the RHOAI Dashboard (e.g., `lab-workspace`)
+2. **Launch a Workbench** using the *Standard Data Science* notebook image
+3. **Clone the repo** in the Workbench terminal:
+   ```bash
+   git clone <repo-url>
+   cd rhoai-coding-assistant-lab
+   ```
+4. **Log in with your user credentials** in the Workbench terminal:
+   ```bash
+   oc login -u <username> https://api.<cluster>:6443
+   ```
+   > **Important:** Use your own user credentials, **not** the pod's ServiceAccount token. Your admin-group membership grants the required cluster-level permissions. The ServiceAccount token only has limited namespace-scoped access.
+
+5. **Open `0_setup/1_environment_setup.ipynb`** and run all cells. The bootstrap cell (Section 0) automatically:
+   - Installs `oc` CLI into the Workbench (downloaded to `/opt/app-root/bin`)
+   - Installs Python dependencies via `pip` (no `uv` needed)
+   - Verifies your cluster login
+
+### What Works Differently in Workbench
+
+| Feature | Local Machine | RHOAI Workbench |
+|---------|---------------|-----------------|
+| `oc` CLI | Pre-installed | Auto-installed by bootstrap cell |
+| Python deps | `uv sync` | Auto-installed via `pip` |
+| `.env` file | Local filesystem | PVC (persists across restarts) |
+| `oc port-forward` | Works | Works (tunnel is local to the pod) |
+| IDE configuration (Phase 3) | Configure locally | **Reference only** — apply settings on your local IDE |
+| macOS TLS workarounds | `launchctl setenv ...` | Not applicable (Linux container) |
+
+### Notes
+
+- The **IDE configuration notebooks** (`1_mcp_servers/4_connect_ide_clients.ipynb`, `3_basic_run/1_ide_model_config.ipynb`) describe settings for your **local developer IDE** (VS Code, Cursor, Claude Code). If running in a Workbench, use these as reference and apply the configuration on your local machine.
+- The `oc` CLI is installed to `/opt/app-root/bin` which is on the default PATH in Workbench images. It persists as long as the Workbench pod is running, but will need to be reinstalled after a Workbench restart (the bootstrap cell handles this automatically).
+- Python dependencies installed via `pip` also persist on the PVC.
+
 ## Verification Checklist
 
 ```bash
