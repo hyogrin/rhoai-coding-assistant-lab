@@ -79,14 +79,13 @@ This lab is designed for **hands-on learning**, not production deployment. Sever
 
 * `0_setup/0_prerequisites.md` — Required access, tools, environment preparation
 * `0_setup/1_environment_setup.ipynb` — Verify cluster, install MaaS infrastructure, deploy models on RHOAI
-* `0_setup/2_app_setup.ipynb` — Deploy the `cafe-order-system` demo app (target for MCP servers)
+* `0_setup/3_app_setup.ipynb` — Deploy the `cafe-order-system` demo app (target for MCP servers)
 
 ### Phase 1 — MCP Servers
 
 * `1_mcp_servers/1_mcp_overview.md` — MCP protocol, server types, deployment strategy
 * `1_mcp_servers/2_deploy_mcp_servers.ipynb` — Deploy 5 MCP servers (Context7, SearXNG, Code Sandbox, Codebase Search, Repo Docs)
-* `1_mcp_servers/3_integrate_mcp_catalog.ipynb` — Register with MCP Gateway & RHOAI Catalog (MCPServerRegistration, tool aggregation)
-* `1_mcp_servers/4_connect_ide_clients.ipynb` — Configure IDEs to connect via Routes
+* `1_mcp_servers/3_connect_ide_clients.ipynb` — Configure IDEs to connect via Routes
 
 ### Phase 2 — MaaS Gateway
 
@@ -101,7 +100,6 @@ This lab is designed for **hands-on learning**, not production deployment. Sever
 * `3_basic_run/2_run_public_coding_assistant.ipynb` — **Public network**: all 5 MCP tools active (Context7 + SearXNG + local tools)
 * `0_setup/apps/cafe-order-system/AGENTS.md` — **Agent harness**: project-level instructions that create a plan-execute-verify inner loop.
   An `AGENTS.md` file gives the AI agent project-specific rules (architecture, conventions, verification steps) so it follows a **Plan → Execute → Verify** cycle instead of generating generic code. The notebook compares agent output with and without this harness.
-* `3_basic_run/3_run_closed_coding_assistant.ipynb` — **Air-gapped**: 3 local tools only (Codebase Search + Repo Docs + Code Sandbox)
 
 ### Phase 4 — Centralized Control
 
@@ -117,7 +115,7 @@ This lab is designed for **hands-on learning**, not production deployment. Sever
 ### Phase 6 — Observability
 
 * `6_monitoring/1_monitoring_overview.md` — Observability stack architecture (metrics, tracing, dashboards)
-* `6_monitoring/1_observability_setup.ipynb` — Deploy ServiceMonitor, PodMonitor, Tempo, OTel Collector, Grafana
+* `6_monitoring/2_observability_setup.ipynb` — Deploy ServiceMonitor, PodMonitor, Tempo, OTel Collector, Grafana
 
 ## Prerequisites
 

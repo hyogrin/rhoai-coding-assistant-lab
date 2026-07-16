@@ -216,7 +216,7 @@ TempoMonolithic with gateway exposes these service ports:
 
 ## Deployment Order
 
-The monitoring notebook (`1_observability_setup.ipynb`) follows this sequence:
+The monitoring notebook (`2_observability_setup.ipynb`) follows this sequence:
 
 ```
 1. Verify operators are installed (Tempo, OTel, COO)
@@ -380,5 +380,5 @@ Grafana Dashboard              MaaS API                    Identity
 
 ### Setup
 
-See `2_maas_usage_dashboard.ipynb` for deploying the Grafana dashboard.
+See `3_maas_usage_dashboard.ipynb` for deploying the Grafana dashboard.
 Raw PromQL queries are also demonstrated in `../4_control/1_maas_advanced.ipynb` Section 4.

@@ -25,7 +25,7 @@ spec:
       - name: main
         env:
           - name: VLLM_ADDITIONAL_ARGS
-            value: "--max-model-len=16384 --gpu-memory-utilization=0.90 --enforce-eager --enable-auto-tool-choice --tool-call-parser=hermes"
+            value: "--max-model-len=32768 --gpu-memory-utilization=0.90 --enforce-eager --enable-auto-tool-choice --tool-call-parser=hermes --chat-template=/etc/chat-template/chat_template.jinja"
         resources:
           requests:
             cpu: "4"
@@ -35,6 +35,14 @@ spec:
             cpu: "8"
             memory: 48Gi
             nvidia.com/gpu: "1"
+        volumeMounts:
+          - name: chat-template
+            mountPath: /etc/chat-template
+            readOnly: true
+    volumes:
+      - name: chat-template
+        configMap:
+          name: qwen36-chat-template
     tolerations:
       - key: nvidia.com/gpu
         operator: Exists
