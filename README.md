@@ -25,10 +25,10 @@ flowchart LR
         end
 
         subgraph Serving["Model Serving (llm-d)"]
-            vLLM["Qwen3.6-27B"]
+            vLLM["Qwen3.5-35B-A3B"]
         end
 
-        subgraph Tools["MCP Servers"]
+        subgraph Tools["MCP Servers (Direct Routes)"]
             direction TB
             C7[Context7] ~~~ Search[Codebase Search] 
             SXG[SearXNG] ~~~ Docs[Repo Docs]
@@ -38,7 +38,7 @@ flowchart LR
 
     IDE -->|"API Key / HTTPS"| GW
     GW -->|"OpenAI API"| Serving
-    GW -->|"MCP Protocol"| Tools
+    IDE -->|"MCP / HTTPS (Routes)"| Tools
 ```
 
 ## Scope & Security Notes
@@ -62,11 +62,10 @@ This lab is designed for **hands-on learning**, not production deployment. Sever
 |-------|--------|-------|-------------|
 | **0** | `0_setup/` | Environment, MaaS infra & models | MaaS gateway running, models deployed, demo app ready |
 | **1** | `1_mcp_servers/` | MCP tool servers | 5 MCP servers accessible via Routes |
-| **2** | `2_maas/` | MaaS registration & access | Model registration, API keys, MCP gateway routes |
-| **3** | `3_basic_run/` | Run coding assistant | Public vs air-gapped comparison |
-| **4** | `4_control/` | Centralized control | Rate limiting & policy enforcement |
-| **5** | `5_benchmarks/` | Coding evaluation | HumanEval+ & MBPP+ pass@1 via EvalHub |
-| **6** | `6_monitoring/` | Observability | Metrics, dashboards & distributed tracing |
+| **2** | `2_basic_run/` | Run coding assistant | Public vs air-gapped comparison |
+| **3** | `3_maas_test/` | MaaS gateway testing | Rate limiting & policy enforcement |
+| **4** | `4_benchmarks/` | Coding evaluation | HumanEval+ & MBPP+ pass@1 via EvalHub |
+| **5** | `5_monitoring/` | Observability | Metrics, dashboards & distributed tracing |
 
 > Together: models provide the **"brain"** (inference), MCP tools provide the **"hands"** (actions), MaaS provides **"governance"** (auth, rate limiting, API keys), and AI Skills provide **"knowledge"** (domain-specific instructions).
 
@@ -87,35 +86,29 @@ This lab is designed for **hands-on learning**, not production deployment. Sever
 * `1_mcp_servers/2_deploy_mcp_servers.ipynb` — Deploy 5 MCP servers (Context7, SearXNG, Code Sandbox, Codebase Search, Repo Docs)
 * `1_mcp_servers/3_connect_ide_clients.ipynb` — Configure IDEs to connect via Routes
 
-### Phase 2 — MaaS Gateway
+### Phase 2 — Run the Coding Assistant
 
-* `2_maas/1_maas_overview.md` — MaaS architecture, prerequisites (RHCL, MetalLB), CRD reference
-* `2_maas/2_enable_maas.ipynb` — Register model (MaaSModelRef), create policies + API keys, register MCP servers via gateway
-* `2_maas/3_test_model_serving.ipynb` — Inference, streaming, auth enforcement (401/403 verification)
-* `2_maas/4_test_mcp_servers.ipynb` — MCP protocol tests through gateway, direct vs gateway comparison
-
-### Phase 3 — Run the Coding Assistant
-
-* `3_basic_run/1_ide_model_config.ipynb` — Configure IDE model endpoints (self-hosted + MaaS Gateway)
-* `3_basic_run/2_run_public_coding_assistant.ipynb` — **Public network**: all 5 MCP tools active (Context7 + SearXNG + local tools)
+* `2_basic_run/1_ide_model_config.ipynb` — Configure IDE model endpoints (self-hosted + MaaS Gateway)
+* `2_basic_run/2_run_public_coding_assistant.ipynb` — **Public network**: all 5 MCP tools active (Context7 + SearXNG + local tools)
 * `0_setup/apps/cafe-order-system/AGENTS.md` — **Agent harness**: project-level instructions that create a plan-execute-verify inner loop.
   An `AGENTS.md` file gives the AI agent project-specific rules (architecture, conventions, verification steps) so it follows a **Plan → Execute → Verify** cycle instead of generating generic code. The notebook compares agent output with and without this harness.
 
-### Phase 4 — Centralized Control
+### Phase 3 — MaaS Gateway Testing
 
-* `4_control/1_maas_advanced.ipynb` — Multi-tier demo (Free 500 tok/min vs Premium 50K tok/min), API key lifecycle, Prometheus observability
-* `4_control/2_maas_policy_test.ipynb` — Rate limit trigger (429), recovery after window reset
+* `3_maas_test/1_maas_advanced.ipynb` — Multi-tier demo (Free 500 tok/min vs Premium 50K tok/min), API key lifecycle, Prometheus observability
+* `3_maas_test/2_maas_policy_test.ipynb` — Rate limit trigger (429), recovery after window reset
 
-### Phase 5 — Coding Evaluation
+### Phase 4 — Coding Evaluation
 
-* `5_benchmarks/1_benchmarks_overview.md` — Coding evaluation methodology (HumanEval+, MBPP+ pass@1)
-* `5_benchmarks/2_run_benchmarks.ipynb` — Run coding benchmarks via EvalHub SDK, track in MLflow
-* `5_benchmarks/3_capacity_planning.ipynb` — Translate results into team capacity projections
+* `4_benchmarks/1_benchmarks_overview.md` — Coding evaluation methodology (HumanEval+, MBPP+ pass@1)
+* `4_benchmarks/2_run_benchmarks.ipynb` — Run coding benchmarks via EvalHub SDK, track in MLflow
+* `4_benchmarks/3_capacity_planning.ipynb` — Translate results into team capacity projections
 
-### Phase 6 — Observability
+### Phase 5 — Observability
 
-* `6_monitoring/1_monitoring_overview.md` — Observability stack architecture (metrics, tracing, dashboards)
-* `6_monitoring/2_observability_setup.ipynb` — Deploy ServiceMonitor, PodMonitor, Tempo, OTel Collector, Grafana
+* `5_monitoring/1_monitoring_overview.md` — Observability stack architecture (metrics, tracing, dashboards)
+* `5_monitoring/2_observability_setup.ipynb` — Deploy ServiceMonitor, PodMonitor, Tempo, OTel Collector, Grafana
+* `5_monitoring/3_maas_usage_dashboard.ipynb` — MaaS usage dashboard for monitoring model and API key metrics
 
 ## Prerequisites
 
@@ -159,7 +152,7 @@ lola mod add https://github.com/hyogrin/hyo-rhoai-skills.git
 lola install hyo-rhoai-skills -a cursor    # or: -a opencode
 ```
 
-5. Follow phases 0-6 in order.
+5. Follow phases 0-5 in order.
 
 ### Option B: RHOAI Workbench
 
@@ -210,7 +203,7 @@ The lab default is `qwen36-27b`. Other models can be selected via `DEPLOY_MODEL`
 |---|---|---|
 | MaaS Gateway | Yes — API keys, rate limiting, auth | No — direct Route access only |
 | Model Source | OCI modelcar or HuggingFace | S3, PVC, OCI |
-| Used in this lab | Phases 0-6 (default) | Optional for non-MaaS models |
+| Used in this lab | Phases 0-5 (default) | Optional for non-MaaS models |
 
 **llm-d** models are registered with `MaaSModelRef` and accessed through the MaaS gateway,
 giving you centralized API key management, token-based rate limiting, and auth policies.
@@ -228,7 +221,7 @@ giving you centralized API key management, token-based rate limiting, and auth p
 | Server | Type | Air-gapped | Key Tools |
 |--------|------|:----------:|-----------|
 | Context7 | External API | No | `resolve-library-id`, `get-library-docs` |
-| SearXNG | External API | No | `search` |
+| SearXNG | Self-hosted | No | `search-web`, `fetch-web` |
 | Code Sandbox | Local | Yes | `execute_code`, `read_file`, `write_file` |
 | Codebase Search | Local AI | Yes | `search_code`, `get_file`, `list_files` |
 | Repo Docs | Local AI | Yes | `search_docs`, `list_docs` |
