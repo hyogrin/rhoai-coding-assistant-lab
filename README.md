@@ -4,42 +4,7 @@ A hands-on workshop for building a **centralized coding assistant infrastructure
 
 ## Architecture
 
-```mermaid
-flowchart LR
-    subgraph IDE["Developer IDEs"]
-        direction TB
-        Cursor[Cursor]
-        VSCode[VS Code]
-        ClaudeCode[Claude Code]
-        OpenCode[OpenCode]
-        Cursor ~~~ VSCode ~~~ ClaudeCode ~~~ OpenCode
-    end
-
-    subgraph OCP["Red Hat OpenShift"]
-        direction LR
-        subgraph GW["MaaS Gateway (Red Hat Connectivity Link)"]
-            direction TB
-            Auth["Authorino (Auth)"]
-            Limit["Limitador (Rate Limit)"]
-            Auth ~~~ Limit
-        end
-
-        subgraph Serving["Model Serving (llm-d)"]
-            vLLM["Qwen3.5-35B-A3B"]
-        end
-
-        subgraph Tools["MCP Servers (Direct Routes)"]
-            direction TB
-            C7[Context7] ~~~ Search[Codebase Search] 
-            SXG[SearXNG] ~~~ Docs[Repo Docs]
-            Sandbox[Code Sandbox]
-        end
-    end
-
-    IDE -->|"API Key / HTTPS"| GW
-    GW -->|"OpenAI API"| Serving
-    IDE -->|"MCP / HTTPS (Routes)"| Tools
-```
+![architecture](images/coding-assistant-architecture.png)
 
 ## Scope & Security Notes
 
